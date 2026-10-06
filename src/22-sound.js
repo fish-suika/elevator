@@ -38,3 +38,4 @@ function sndRumbleStop() {
 function sndCorrect() { sndTone(784, 0, 0.18, 'triangle', 0.4); sndTone(1175, 0.12, 0.35, 'triangle', 0.4); }          // 正解：上がる 2 音
 function sndMiss() { sndTone(300, 0, 0.16, 'sawtooth', 0.18); sndTone(210, 0.14, 0.3, 'sawtooth', 0.18); }              // 間違い：下がる 2 音
 function sndFanfare() { [523, 659, 784, 1047].forEach((f, k) => sndTone(f, k * 0.13, 0.4, 'triangle', 0.35)); }         // リザルト
+function sndNote() { sndTone(988, 0, 0.12, 'triangle', 0.3); sndTone(1318, 0.09, 0.16, 'triangle', 0.25); }                // 経由・変更など「進んだ」合図（得点なし）

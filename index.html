@@ -52,6 +52,11 @@
   .stat small{display:block;font-size:calc(var(--u)*2.6);letter-spacing:.1em;opacity:.8}
   .stat b{font-size:calc(var(--u)*6);color:var(--amber);font-variant-numeric:tabular-nums}
   #statL{left:calc(var(--u)*3)} #statR{right:calc(var(--u)*3);text-align:right}
+  #memo{position:absolute;left:calc(var(--u)*3);top:calc(env(safe-area-inset-top) + var(--u)*15);z-index:5;pointer-events:none;display:none;flex-direction:column;gap:calc(var(--u)*1);text-shadow:0 2px 8px #000}
+  #memo.on{display:flex}
+  #memo .m{display:flex;align-items:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*0.8) calc(var(--u)*2.4);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*4.2);font-weight:700;font-variant-numeric:tabular-nums}
+  #memo .m i{width:calc(var(--u)*3);height:calc(var(--u)*3);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
+  #memo .m.done{opacity:.4;text-decoration:line-through}
   #speech{position:absolute;left:50%;top:calc(var(--u)*24);transform:translateX(-50%) scale(.9);z-index:5;max-width:80%;padding:calc(var(--u)*2.4) calc(var(--u)*4);
     border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.6);font-weight:700;letter-spacing:.04em;text-align:center;
     opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
@@ -89,7 +94,8 @@
   <div id="top"><div id="cur">現在階：<b id="curN">1F</b><span id="arrow"></span></div></div>
   <div id="msg"></div>
   <div class="stat" id="statL"><small>SCORE</small><b id="scoreN">0</b></div>
-  <div class="stat" id="statR"><small>残り</small><b id="leftN">8</b><small style="display:inline"> 人</small></div>
+  <div class="stat" id="statR"><small>残り</small><b id="leftN">12</b><small style="display:inline"> 組</small></div>
+  <div id="memo"></div>
   <div id="speech"></div>
   <div id="pops"></div>
   <div id="result">
@@ -114,7 +120,7 @@
 "use strict";
 // ===== 調整値（ここに集約） =====
 const CFG = {
-  floors: { enabledMin: 1, enabledMax: 5, startFloor: 1 },        // 使える階の範囲（階番号。B2=-2, B1=-1, 1F=1 …）。Phase 3 以降で広げる
+  floors: { enabledMin: 1, enabledMax: 5, startFloor: 1 },        // 使える階の範囲（階番号。B2=-2, B1=-1, 1F=1 …）。遊んでいる間は組ごとに enabledMax が game.enabledMaxByLv で広がる
   move: { stepSec: 0.85, doorSec: 1.1, startDelay: 0.3, arriveWait: 0.6, chimeFlash: 0.35 },   // 1階あたりの秒数／扉の開閉秒／閉じてから動くまで／到着してから開くまで
   shake: { amp: 0.014, freq: 41 },                                 // 移動中の画面振動
   car: { w: 2.8, h: 2.9, zBack: -1.5, zFront: 2.6, doorW: 1.4, doorH: 2.2 },
@@ -122,12 +128,25 @@ const CFG = {
   person: { x: -0.35, z: -0.1, scale: 1 },
   audio: { master: 0.22 },
   game: {
-    passengers: 8,                                                 // 1 プレイの乗客数
-    correct: 100, wrong: -50, wait: -10,                           // 正解／間違い到着（同じ客では 1 回だけ）／待たせた（同じ客では 1 回だけ）
+    levelPlan: [1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5],                // 組ごとのレベル（長さ = 1 プレイの客の組数）。序盤は単純、徐々に混ざる
+    enabledMaxByLv: { 1: 5, 2: 5, 3: 7, 4: 7, 5: 10 },              // レベルごとに使える最上階（階番号）。組が始まるたびに CFG.floors.enabledMax へ反映
+    lv5Kinds: ['via', 'pass', 'forbid', 'viaOpen'],                 // Lv5 の特殊注文の種類（組ごとに順繰りで混ぜる）
+    multiCounts: [2, 3],                                            // Lv3 の同時乗客数の候補
+    correct: 100, wrong: -50, wait: -10,                           // 降りた（正解）／間違い停止（同じ組では 1 回だけ）／待たせた（進展のあとは 1 回だけ）
+    bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0 },   // 無茶な注文をノーミスで処理したときのボーナス（種類別）
     waitSec: 10,                                                   // 台詞のあと何秒操作しないと「待たせた」になるか
-    boardSec: 1.1, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1,      // 乗る・「ありがとう」の間・降りる秒数／扉の向こう側の z（出入りの起点）
+    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
+    sayGap: 1.5,                                                   // 複数乗客が順に台詞を言う間隔（秒）
+    midShoutSec: 0.2,                                              // Lv4：動き出してから「6階にしてください！」と叫ぶまでの秒
+    debugGroups: 4,                                                // URL ハッシュ #lv=4 でレベルを固定したときの組数（#lv=4&n=2 で変更）
+    slots: {                                                       // 乗客の立ち位置 [x, z]（人数別）
+      1: [[-0.35, -0.1]],
+      2: [[-0.6, -0.15], [0.15, -0.15]],
+      3: [[-0.8, -0.2], [-0.15, -0.1], [0.5, -0.2]]
+    },
+    showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
-    ranks: [                                                       // 満点に対する割合 min 以上で上から判定
+    ranks: [                                                       // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
       { min: 0.95, rank: 'S', stars: 5, title: '完璧なエレベーター係' },
       { min: 0.80, rank: 'A', stars: 4, title: '普通のエレベーター係' },
       { min: 0.60, rank: 'B', stars: 3, title: 'ボタン押し職人' },
@@ -160,30 +179,156 @@ function keyToIndex(k) {                                            // 数字キ
   return floorIndexOf(k === '0' ? 10 : Number(k));
 }
 function gridIndices() { return FLOOR_NUMS.map((_, i) => FLOOR_NUMS.length - 1 - i); }   // ボタン表示順（3列×4段、上が高い階）
-// ===== ゲームの純粋ロジック（目的階・スコア・ランク。three.js 非依存で verify からも使う） =====
+// ===== ゲームの純粋ロジック（オーダー・スコア・ランク。three.js 非依存で verify からも使う） =====
+// 「オーダー」= 1 組の客の注文。kind: simple / change(到着後変更) / mid(移動中変更) / multi(複数乗客) / via(経由) / viaOpen(手前で一度開ける) / pass(通過時に止める) / forbid(行かない階)
+// 判定は「止まった階（扉を開けた階）」ごとに resolveStop(S, order, idx) が行い、降りる／変更／経由／減点／ボーナスを返す。
 function floorSpeech(i) { const n = FLOOR_NUMS[i]; return n < 0 ? '地下' + (-n) + '階' : n + '階'; }   // 台詞用（「3階」「地下1階」）
 
+// ---- 階の選択 ----
+function floorsIn(f) { const r = enabledRange(f), out = []; for (let i = r[0]; i <= r[1]; i++) out.push(i); return out; }
+function floorsForLv(lv, g) { g = g || CFG.game; const mx = g.enabledMaxByLv[lv] != null ? g.enabledMaxByLv[lv] : CFG.floors.enabledMax; return { enabledMin: CFG.floors.enabledMin, enabledMax: mx }; }
+function pickOne(arr, rng) { rng = rng || Math.random; return arr.length ? arr[Math.min(arr.length - 1, Math.floor(rng() * arr.length))] : -1; }
+function strictlyBetween(a, b, list) { const lo = Math.min(a, b), hi = Math.max(a, b); return list.filter(i => i > lo && i < hi); }
+
 // 現在階以外の使用可能階からランダムに 1 つ選ぶ（選べる階が無ければ -1）
-function pickDest(cur, rng, f) {
+function pickDest(cur, rng, f) { return pickOne(floorsIn(f).filter(i => i !== cur), rng); }
+
+// ---- 進行表（組ごとのレベルと種類） ----
+function parseDebug(hash) {                                         // "#lv=4&n=2&kind=pass" → { lv, n, kind } / 指定なしは null
+  const m = /lv=(\d)/.exec(String(hash || '')); if (!m) return null;
+  const lv = Number(m[1]); if (lv < 1 || lv > 5) return null;
+  const n = /[#&]n=(\d+)/.exec(hash), k = /kind=(\w+)/.exec(hash);
+  return { lv: lv, n: n ? Math.max(1, Math.min(30, Number(n[1]))) : CFG.game.debugGroups, kind: k ? k[1] : null };
+}
+function buildPlan(rng, g, dbg) {                                   // [{ lv, kind, n(乗客数) }]
+  rng = rng || Math.random; g = g || CFG.game;
+  const lvs = dbg ? new Array(dbg.n).fill(dbg.lv) : g.levelPlan, ks = g.lv5Kinds;
+  let k5 = Math.floor(rng() * ks.length);
+  return lvs.map(lv => {
+    if (lv === 1) return { lv: lv, kind: 'simple', n: 1 };
+    if (lv === 2) return { lv: lv, kind: 'change', n: 1 };
+    if (lv === 3) return { lv: lv, kind: 'multi', n: pickOne(g.multiCounts, rng) };
+    if (lv === 4) return { lv: lv, kind: 'mid', n: 1 };
+    const kind = dbg && dbg.kind && ks.indexOf(dbg.kind) >= 0 ? dbg.kind : ks[k5++ % ks.length];
+    return { lv: lv, kind: kind, n: 1 };
+  });
+}
+function planMax(plan, g) { g = g || CFG.game; return plan.reduce((s, e) => s + e.n * g.correct + (g.bonus[e.kind] || 0), 0); }
+
+// ---- オーダーの生成（cur = 乗った階のインデックス） ----
+function genOrder(entry, cur, rng, f) {
   rng = rng || Math.random;
-  const r = enabledRange(f), c = [];
-  for (let i = r[0]; i <= r[1]; i++) if (i !== cur) c.push(i);
-  if (!c.length) return -1;
-  return c[Math.min(c.length - 1, Math.floor(rng() * c.length))];
+  const R = floorsIn(f), others = R.filter(i => i !== cur), kind = entry.kind;
+  const base = k => ({ kind: k, lv: entry.lv || 1, riders: [], seq: [], seqDone: 0, forbid: -1, changeTo: -1, changed: false, midTo: -1, midState: '', violated: false });
+  const rider = (name, d) => ({ name: name, dest: d, off: false });
+  const simple = () => { const o = base('simple'); o.riders.push(rider('', pickOne(others, rng))); o.fallback = kind !== 'simple'; return o; };
+  if (!others.length) return null;
+  let o, d, far;
+  switch (kind) {
+    case 'change': {
+      d = pickOne(others, rng); const m = pickOne(R.filter(i => i !== d), rng);
+      if (m < 0) return simple();
+      o = base('change'); o.riders.push(rider('', d)); o.changeTo = m; return o;
+    }
+    case 'mid': {
+      far = others.filter(i => Math.abs(i - cur) >= 2); d = pickOne(far.length ? far : others, rng);   // 最初の目的階は遠めに（叫ぶ前に着かないように）
+      const c = R.filter(i => i !== d && i !== cur), m = pickOne(c.length ? c : R.filter(i => i !== d), rng);
+      if (m < 0) return simple();
+      o = base('mid'); o.riders.push(rider('', d)); o.midTo = m; o.midState = 'pending'; return o;
+    }
+    case 'multi': {
+      const n = Math.min(entry.n || 2, others.length); if (n < 2) return simple();
+      const pool = others.slice(), names = ['A', 'B', 'C', 'D']; o = base('multi');
+      for (let k = 0; k < n; k++) { const j = Math.min(pool.length - 1, Math.floor(rng() * pool.length)); o.riders.push(rider(names[k], pool.splice(j, 1)[0])); }
+      return o;
+    }
+    case 'via': case 'pass': {
+      far = others.filter(i => strictlyBetween(cur, i, R).length > 0); if (!far.length) return simple();   // 間に階がある目的階だけ
+      d = pickOne(far, rng); const v = pickOne(strictlyBetween(cur, d, R), rng);
+      o = base(kind); o.riders.push(rider('', d)); o.seq = [v]; return o;
+    }
+    case 'viaOpen': {
+      far = others.filter(i => Math.abs(i - cur) >= 2 && R.indexOf(i - moveDir(cur, i)) >= 0); if (!far.length) return simple();
+      d = pickOne(far, rng); o = base('viaOpen'); o.riders.push(rider('', d)); o.seq = [d - moveDir(cur, d)]; return o;   // 目的階の 1 つ手前
+    }
+    case 'forbid': {
+      d = pickOne(others, rng); const c = R.filter(i => i !== cur && i !== d), bt = strictlyBetween(cur, d, R);
+      if (!c.length) return simple();
+      o = base('forbid'); o.riders.push(rider('', d)); o.forbid = pickOne(bt.length ? bt : c, rng); return o;
+    }
+    default: return simple();
+  }
 }
 
-// スコア状態。missed / waited は「今の乗客に対してもう減点したか」（同じ客では 1 回だけ）
+// ---- 台詞 ----
+function orderLines(o) {                                            // 乗ったときの台詞 [{ who: 名前('' なら単独), text }]
+  const r0 = o.riders[0], d = r0 ? floorSpeech(r0.dest) : '';
+  switch (o.kind) {
+    case 'multi': return o.riders.map(r => ({ who: r.name, text: floorSpeech(r.dest) + 'お願いします' }));
+    case 'via': return [{ who: '', text: floorSpeech(o.seq[0]) + 'で一回止まって、そのあと' + d }];
+    case 'viaOpen': return [{ who: '', text: d + '、でも' + floorSpeech(o.seq[0]) + 'で一度ドアを開けて' }];
+    case 'pass': return [{ who: '', text: d + 'お願いします。' + floorSpeech(o.seq[0]) + 'を通過するときに止めて' }];
+    case 'forbid': return [{ who: '', text: d + 'お願いします。' + floorSpeech(o.forbid) + 'には行かないで' }];
+    default: return [{ who: '', text: d + 'お願いします' }];
+  }
+}
+function changeLine(o) { return '……あ、やっぱり' + floorSpeech(o.changeTo) + 'です'; }
+function midLine(o) { return 'すみません！' + floorSpeech(o.midTo) + 'にしてください！'; }
+function viaDoneLine(o) { const d = floorSpeech(o.riders[0].dest); return o.kind === 'pass' ? 'あ、ここです。そのまま' + d + 'へ' : 'はい、次は' + d + 'お願いします'; }
+function orderReminder(o) {                                         // 間違えたときに添える現在の注文
+  const r = o.riders.find(x => !x.off); if (!r) return '';
+  const d = floorSpeech(r.dest);
+  if (o.seqDone < o.seq.length) return o.kind === 'pass' ? floorSpeech(o.seq[0]) + 'で止めてから' + d + 'です' : '先に' + floorSpeech(o.seq[0]) + 'で止まってから' + d + 'です';
+  if (o.kind === 'forbid') return d + 'です（' + floorSpeech(o.forbid) + 'は行かないで）';
+  return d + 'です';
+}
+function moveInputAllowed(o) { return !!o && (o.kind === 'pass' || (o.kind === 'mid' && o.midState === 'shouted')); }   // 移動中でもボタンを受け付けるオーダー
+function midShout(o) { if (o.kind !== 'mid' || o.midState !== 'pending') return null; o.midState = 'shouted'; o.riders[0].dest = o.midTo; return midLine(o); }   // 移動中の変更（目的階を差し替えて台詞を返す）
+function orderLeft(o) { return o.riders.filter(r => !r.off).length; }
+
+// ---- スコア ----
+// missed：この組でもう間違い減点したか（1 組 1 回）／waited：待たせ減点したか（客に進展があるまで 1 回）
 function newScore(total) { return { score: 0, total: total, served: 0, missed: false, waited: false }; }
-function scoreCorrect(S, g) { g = g || CFG.game; S.score += g.correct; S.served++; S.missed = false; S.waited = false; return g.correct; }
+function scoreOff(S, g) { g = g || CFG.game; S.score += g.correct; S.waited = false; return g.correct; }                  // 1 人降りた
+function scoreGroupDone(S) { S.served++; S.missed = false; S.waited = false; }                                            // 組が終わった
+function scoreCorrect(S, g) { g = g || CFG.game; const v = scoreOff(S, g); scoreGroupDone(S); return v; }                  // 単独客：降りて組も終わる
 function scoreWrong(S, g) { g = g || CFG.game; if (S.missed) return 0; S.missed = true; S.score += g.wrong; return g.wrong; }
 function scoreWait(S, g) { g = g || CFG.game; if (S.waited) return 0; S.waited = true; S.score += g.wait; return g.wait; }
-function remaining(S) { return S.total - S.served; }
+function scoreProgress(S) { S.waited = false; }                                                                           // 変更・経由など進展があった
+function remaining(S) { return S.total - S.served; }                                                                     // 残り組数
 function isFinished(S) { return S.served >= S.total; }
 
-// ランク。満点（全員正解）に対する割合で ranks の上から最初に当てはまるもの
-function rankFor(score, total, g) {
+// ---- 止まった階の判定 ----
+// 戻り値 { off: 降りた乗客の添字(-1=なし), changed, via, wrong, wrongKind('wrong'|'early'|'forbid'), done(組が終わった), deltas:[{ v, label }] }
+function resolveStop(S, o, idx, g) {
   g = g || CFG.game;
-  const ratio = Math.max(0, Math.min(1, score / (total * g.correct)));
+  const res = { off: -1, changed: false, via: false, wrong: false, wrongKind: '', done: false, deltas: [] };
+  const hit = o.riders.findIndex(r => !r.off && r.dest === idx), pending = o.seqDone < o.seq.length;
+  const wrong = kind => { res.wrong = true; res.wrongKind = kind; const d = scoreWrong(S, g); if (d) res.deltas.push({ v: d, label: '' }); };
+  if (pending && idx === o.seq[o.seqDone]) { o.seqDone++; res.via = true; scoreProgress(S); return res; }
+  if (hit >= 0) {
+    if (pending) { wrong('early'); return res; }                    // 経由する前に最終階へ着いた
+    if (o.changeTo >= 0 && !o.changed) {                            // 到着後の変更：降りない。減点もしない
+      o.changed = true; o.riders[hit].dest = o.changeTo; res.changed = true; scoreProgress(S); return res;
+    }
+    o.riders[hit].off = true; res.off = hit; res.deltas.push({ v: scoreOff(S, g), label: '' });
+    if (!orderLeft(o)) {
+      res.done = true;
+      const b = g.bonus[o.kind] || 0;
+      if (b && !S.missed && !o.violated) { S.score += b; res.deltas.push({ v: b, label: 'BONUS' }); }
+      scoreGroupDone(S);
+    }
+    return res;
+  }
+  if (idx === o.forbid) { o.violated = true; wrong('forbid'); return res; }
+  wrong('wrong');
+  return res;
+}
+
+// ランク。満点（planMax）に対する割合で ranks の上から最初に当てはまるもの
+function rankFor(score, max, g) {
+  g = g || CFG.game;
+  const ratio = Math.max(0, Math.min(1, score / Math.max(1, max)));
   for (let k = 0; k < g.ranks.length; k++) if (ratio >= g.ranks[k].min) return g.ranks[k];
   return g.ranks[g.ranks.length - 1];
 }
@@ -227,6 +372,7 @@ function sndRumbleStop() {
 function sndCorrect() { sndTone(784, 0, 0.18, 'triangle', 0.4); sndTone(1175, 0.12, 0.35, 'triangle', 0.4); }          // 正解：上がる 2 音
 function sndMiss() { sndTone(300, 0, 0.16, 'sawtooth', 0.18); sndTone(210, 0.14, 0.3, 'sawtooth', 0.18); }              // 間違い：下がる 2 音
 function sndFanfare() { [523, 659, 784, 1047].forEach((f, k) => sndTone(f, k * 0.13, 0.4, 'triangle', 0.35)); }         // リザルト
+function sndNote() { sndTone(988, 0, 0.12, 'triangle', 0.3); sndTone(1318, 0.09, 0.16, 'triangle', 0.25); }                // 経由・変更など「進んだ」合図（得点なし）
 // ===== エレベーター内部（3D）。すべてプリミティブ =====
 const CAR = { doorL: null, doorR: null, hall: null, hallMat: null, dispTex: null, dispCtx: null, dispCanvas: null, lamp: null };
 
@@ -437,9 +583,20 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
 // ---- Phase 2：スコア・台詞・リザルト ----
 function hudScore(S) { $('scoreN').textContent = S.score; $('leftN').textContent = remaining(S); }
 function hudSpeech(text) { const s = $('speech'); if (!text) { s.classList.remove('on'); return; } s.textContent = text; s.classList.add('on'); }
-function hudPop(delta) {                                           // 加点・減点を小さく浮かせる
+function hudEnabled() { HUD.btns.forEach((b, i) => b.classList.toggle('off', !isEnabled(i))); }   // 使える階が広がったらボタンを有効に
+function hudMemo(items) {                                          // 複数乗客のメモ [{ name, text, color, done }]。items が空 / CFG.game.showMemo=false なら隠す
+  const m = $('memo'); m.innerHTML = '';
+  if (!items || !items.length || !CFG.game.showMemo) { m.classList.remove('on'); return; }
+  items.forEach(it => {
+    const d = document.createElement('div'); d.className = 'm' + (it.done ? ' done' : '');
+    const dot = document.createElement('i'); dot.style.background = it.color; d.appendChild(dot);
+    d.appendChild(document.createTextNode(it.name + ':' + it.text)); m.appendChild(d);
+  });
+  m.classList.add('on');
+}
+function hudPop(delta, label) {                                    // 加点・減点を小さく浮かせる（label があれば「BONUS +30」）
   const p = document.createElement('div');
-  p.className = 'pop ' + (delta > 0 ? 'plus' : 'minus'); p.textContent = (delta > 0 ? '+' : '') + delta;
+  p.className = 'pop ' + (delta > 0 ? 'plus' : 'minus'); p.textContent = (label ? label + ' ' : '') + (delta > 0 ? '+' : '') + delta;
   p.style.animationDuration = CFG.game.popSec + 's';
   $('pops').appendChild(p); setTimeout(() => p.remove(), CFG.game.popSec * 1000 + 100);
 }
@@ -452,7 +609,8 @@ function hudResult(info) {                                         // info = { s
   r.classList.add('on');
 }
 // ===== 起動とメインループ・エレベーターの動き =====
-// mode: idle（扉は開閉どちらでも・操作可）→ closing（扉を閉じる）→ moving（1階ずつ）→ arrived（チャイム）→ opening → idle
+// mode: idle（扉は開閉どちらでも・操作可）→ closing（扉を閉じる）→ moving（1階ずつ）→ arrived（チャイム）→ opening → 判定 → idle / exiting（降りる）
+// 「止まった階（扉を開けた階）」ごとに resolveStop（25-game.js）が降りる／変更／経由／減点／ボーナスを決める
 (function boot() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -463,7 +621,6 @@ function hudResult(info) {                                         // info = { s
   const scene = new THREE.Scene();
   buildCar(scene);
   const camera = new THREE.PerspectiveCamera(60, 9 / 16, 0.1, 40);
-  let person = null;                                         // 今の乗客（乗る前・降りたあとは null）
 
   function fit() {                                           // 枠の大きさに合わせる。文字の基準 --u は枠の幅の 1/100
     const w = view.clientWidth, h = view.clientHeight;
@@ -477,44 +634,86 @@ function hudResult(info) {                                         // info = { s
   addEventListener('resize', fit); addEventListener('orientationchange', fit);
 
   // ---- 状態 ----
-  // mode に Phase 2 で boarding（乗る）/ exiting（ありがとう→降りる）/ finishing（最後の客のあと）/ result を追加。idle 以外は操作を受け付けない
-  const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0, style: 0,
-              S: newScore(CFG.game.passengers), want: -1, pt: 0, waitT: 0, styleBase: 0 };   // want = 乗客の目的階、pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒
+  // order = 今の組のオーダー、people = その乗客の 3D（降りたら null）、S.served = 終わった組数
+  const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0,
+              S: newScore(CFG.game.levelPlan.length), plan: [], max: 1, order: null, people: [], leaving: -1, res: null, reroute: -1, mt: 0,
+              sayQ: [], sayT: 0, memoShown: [], pt: 0, waitT: 0, styleBase: 0 };   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
   window.GAME = G;                                           // 確認用
   const busy = () => G.mode !== 'idle';
 
   function setDoorTarget(v) { if (G.doorTarget !== v) sndDoor(); G.doorTarget = v; }
 
+  // ---- 台詞（キューで順に出す。大事な出来事は sayNow で割り込む） ----
+  function flushSay() { while (G.sayQ.length) { const it = G.sayQ.shift(); if (it.reveal) it.reveal(); } }
+  function sayNow(text) { flushSay(); hudSpeech(text); }
+  function refreshMemo() {                                   // 複数乗客のメモ（言った人から順に目的階が出る）
+    const o = G.order;
+    if (!o || o.kind !== 'multi') { hudMemo(null); return; }
+    hudMemo(o.riders.map((r, k) => ({ name: r.name, text: G.memoShown[k] ? floorLabel(r.dest).replace('F', '') : '?', color: G.people[k] ? G.people[k].userData.color : '#888', done: r.off })));
+  }
+
   // ---- 乗客 ----
-  function spawnPassenger() {                                // 扉の向こうから現れて歩いて入る
-    if (person) scene.remove(person);
-    person = makePerson(G.styleBase + G.S.served);           // 見た目は順繰り
-    person.position.set(CFG.person.x, 0, CFG.game.doorZ); person.scale.setScalar(CFG.person.scale);
-    scene.add(person);
-    G.want = pickDest(G.idx);
-    hudSpeech(null); G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
+  function clearPeople() { G.people.forEach(p => p && scene.remove(p)); G.people = []; }
+  function spawnGroup() {                                    // 扉の向こうから現れて歩いて入る
+    clearPeople();
+    const entry = G.plan[G.S.served];
+    CFG.floors.enabledMax = floorsForLv(entry.lv).enabledMax; hudEnabled();   // 組のレベルに応じて使える階が広がる
+    const o = G.order = genOrder(entry, G.idx, Math.random, floorsForLv(entry.lv));
+    const slots = CFG.game.slots[o.riders.length] || CFG.game.slots[1];
+    G.people = o.riders.map((r, k) => {
+      const si = (G.styleBase + G.S.served * 3 + k) % PERSON_STYLES.length;
+      const p = makePerson(si); p.userData.slot = slots[k] || slots[0];
+      p.userData.color = '#' + PERSON_STYLES[si].shirt.toString(16).padStart(6, '0');
+      p.position.set(CFG.game.doorX, 0, CFG.game.doorZ); p.scale.setScalar(CFG.person.scale);
+      scene.add(p); return p;
+    });
+    G.memoShown = o.riders.map(() => false); refreshMemo();
+    G.sayQ = []; hudSpeech(null); G.reroute = -1; G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
+  }
+  function startIntro() {                                    // 乗り終わったら台詞。複数乗客は 1 人ずつ順に
+    const lines = orderLines(G.order);
+    G.sayQ = lines.map((ln, k) => ({ text: (ln.who ? ln.who + '：' : '') + ln.text, reveal: () => { G.memoShown[k] = true; refreshMemo(); } }));
+    G.sayT = 0; G.mode = 'idle'; G.waitT = -(lines.length - 1) * CFG.game.sayGap;
   }
   function startGame() {
-    G.S = newScore(CFG.game.passengers); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
-    G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
-    spawnPassenger();
+    G.plan = buildPlan(Math.random, CFG.game, parseDebug(G.debugHash != null ? G.debugHash : location.hash)); G.max = planMax(G.plan);
+    G.S = newScore(G.plan.length); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
+    G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; G.reroute = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
+    spawnGroup();
   }
-  function popScore(d) { if (d) { hudPop(d); hudScore(G.S); } }
-  function judgeArrival() {                                  // 扉が開ききったところで目的階と照らし合わせる
-    if (G.idx === G.want) {
-      popScore(scoreCorrect(G.S)); sndCorrect(); hudSpeech('ありがとうございます');
-      G.mode = 'exiting'; G.pt = 0;
-    } else {
-      const d = scoreWrong(G.S); popScore(d); sndMiss();
-      hudSpeech((d ? 'えっ、ここ？ ' : 'そこじゃないです… ') + floorSpeech(G.want) + 'です');
+  function popScore(deltas) {                                // 浮き文字。2 つ目以降（ボーナス）は少し遅らせる
+    deltas.forEach((d, k) => setTimeout(() => hudPop(d.v, d.label), k * 350));
+    if (deltas.length) hudScore(G.S);
+  }
+  function judgeStop() {                                     // 扉が開ききったところで、止まった階をオーダーに照らす
+    const o = G.order, res = G.res = resolveStop(G.S, o, G.idx);
+    popScore(res.deltas);
+    if (res.off >= 0) {
+      const r = o.riders[res.off];
+      sndCorrect(); sayNow((r.name ? r.name + '：' : '') + 'ありがとうございます'); refreshMemo();
+      G.leaving = res.off; G.mode = 'exiting'; G.pt = 0;
+      G.people[res.off].userData.from = [G.people[res.off].position.x, G.people[res.off].position.z];
+    } else if (res.changed) {
+      sndBad(); sayNow(changeLine(o)); G.mode = 'idle'; G.waitT = 0;
+    } else if (res.via) {
+      sndNote(); sayNow(viaDoneLine(o)); G.mode = 'idle'; G.waitT = 0;
+    } else {                                                 // 間違い（降りない階・禁止階・経由前）
+      const first = res.deltas.length > 0; sndMiss();
+      if (res.wrongKind === 'forbid') sayNow('えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに');
+      else if (o.kind === 'multi') sayNow(first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…');
+      else sayNow((first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o));
       G.mode = 'idle'; G.waitT = 0;
     }
   }
-  function touch() { G.waitT = 0; }                          // 操作したら「待たせた」タイマーをやり直す
+  function touchReset()  /* 操作したら「待たせた」タイマーをやり直す（台詞中は負の値から） */ { G.waitT = G.sayQ.length ? -(G.sayQ.length) * CFG.game.sayGap : 0; }
 
   function pressFloor(i) {
-    inputFirstGesture(); sndResume(); touch();
+    inputFirstGesture(); sndResume(); touchReset();
     if (!isEnabled(i)) { return; }
+    if ((G.mode === 'moving' || G.mode === 'closing') && moveInputAllowed(G.order)) {  // Lv4 の変更後・Lv5 の通過停止だけ、扉が閉まる間・移動中でも受け付ける（次の階に着いたところで向きを変える）
+      if (i === G.dest && G.reroute < 0) return;
+      sndClick(); G.reroute = i; hudLit(i, true); return;
+    }
     if (busy()) { sndBad(); return; }                        // 移動中は受け付けない
     sndClick();
     if (i === G.idx) { setDoorTarget(1); hudMsg(floorLabel(i) + 'です'); return; }   // 同じ階：扉を開くだけ
@@ -523,11 +722,23 @@ function hudResult(info) {                                         // info = { s
     setDoorTarget(0); G.mode = 'closing'; G.t = 0;
   }
   INPUT.onFloor = pressFloor;
-  INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touch(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); };
-  INPUT.onClose = () => { inputFirstGesture(); sndResume(); touch(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
+  INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touchReset(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); };
+  INPUT.onClose = () => { inputFirstGesture(); sndResume(); touchReset(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
   INPUT.onFirst = () => { sndInit(); sndResume(); };
 
   function showFloor() { hudSetFloor(G.idx); carSetDisplay(floorLabel(G.idx), G.mode === 'moving' ? G.dir : 0); carSetHall(G.idx); }
+  function arrive() {
+    G.mode = 'arrived'; G.t = 0; hudArrow(0); sndRumbleStop(); sndChime(); G.flash = 1; showFloor();
+    HUD.btns.forEach((b, k) => hudLit(k, false));
+  }
+  function applyReroute() {                                  // 移動中に押された階へ、いま着いた階から行き先を差し替える
+    const r = G.reroute; G.reroute = -1;
+    const oldDir = G.dir;
+    G.dest = r; G.path = pathBetween(G.idx, r); G.step = 0;
+    if (!G.path.length) { arrive(); return; }
+    G.dir = moveDir(G.idx, r); hudArrow(G.dir); showFloor();
+    if (G.dir !== oldDir) { sndRumbleStop(); sndRumbleStart(G.dir); }
+  }
 
   // ---- 1 フレーム分の進行 ----
   function update(dt) {
@@ -537,50 +748,66 @@ function hudResult(info) {                                         // info = { s
     else if (G.door > G.doorTarget) G.door = Math.max(G.doorTarget, G.door - ds);
     carSetDoor(G.door);
 
+    // 台詞キュー
+    if (G.sayQ.length) {
+      G.sayT -= dt;
+      if (G.sayT <= 0) { const it = G.sayQ.shift(); hudSpeech(it.text); if (it.reveal) it.reveal(); G.sayT = CFG.game.sayGap; }
+    }
+
+    const walking = new Set(), n = G.people.length;
     G.t += dt;
     if (G.mode === 'closing') {
       if (G.door <= 0) G.c = (G.c || 0) + dt; else G.c = 0;
       if (G.door <= 0 && G.c >= CFG.move.startDelay) {
         G.c = 0;
-        G.mode = 'moving'; G.t = 0; G.step = 0; hudArrow(G.dir); sndRumbleStart(G.dir); showFloor();
+        G.mode = 'moving'; G.t = 0; G.mt = 0; G.step = 0; hudArrow(G.dir); sndRumbleStart(G.dir); showFloor();
       }
     } else if (G.mode === 'moving') {
+      G.mt += dt;
+      if (G.order && G.order.kind === 'mid' && G.order.midState === 'pending' && G.mt >= CFG.game.midShoutSec) {   // Lv4：動いている最中に目的階が変わる
+        const line = midShout(G.order); sndBad(); sayNow(line);
+      }
       if (G.t >= CFG.move.stepSec) {                         // 1 階進む
         G.t -= CFG.move.stepSec; G.idx = G.path[G.step++]; sndTick(); showFloor();
-        if (G.step >= G.path.length) {
-          G.mode = 'arrived'; G.t = 0; hudArrow(0); sndRumbleStop(); sndChime(); G.flash = 1; showFloor(); hudLit(G.dest, false);
-        }
+        if (G.reroute >= 0) applyReroute();
+        else if (G.step >= G.path.length) arrive();
       }
     } else if (G.mode === 'arrived') {
       if (G.t >= CFG.move.arriveWait) { G.mode = 'opening'; G.t = 0; setDoorTarget(1); }
     } else if (G.mode === 'opening') {
-      if (G.door >= 1) { G.dest = -1; judgeArrival(); }
-    } else if (G.mode === 'boarding') {                      // 扉が開いてから、奥から歩いて入ってくる
+      if (G.door >= 1) { G.dest = -1; judgeStop(); }
+    } else if (G.mode === 'boarding') {                      // 扉が開いてから、奥から歩いて入ってくる（複数乗客は少しずつ遅れて）
       if (G.door >= 1) {
-        G.pt += dt; const k = Math.min(1, G.pt / CFG.game.boardSec);
-        person.position.z = CFG.game.doorZ + (CFG.person.z - CFG.game.doorZ) * k; walkPerson(person, G.time);
-        if (k >= 1) { G.mode = 'idle'; G.waitT = 0; hudSpeech(floorSpeech(G.want) + 'お願いします'); }
+        G.pt += dt;
+        G.people.forEach((p, k) => {
+          const e = Math.max(0, Math.min(1, (G.pt - k * CFG.game.boardStagger) / CFG.game.boardSec)), s = p.userData.slot, gm = CFG.game;
+          p.position.x = gm.doorX + (s[0] - gm.doorX) * e; p.position.z = gm.doorZ + (s[1] - gm.doorZ) * e;
+          if (e < 1) { walkPerson(p, G.time); walking.add(p); }
+        });
+        if (G.pt >= CFG.game.boardSec + (n - 1) * CFG.game.boardStagger) startIntro();
       }
-    } else if (G.mode === 'exiting') {                       // 「ありがとうございます」→ 振り向いて扉から出ていく
+    } else if (G.mode === 'exiting') {                       // 「ありがとうございます」→ 振り向いて扉から出ていく（残りの乗客はそのまま）
       G.pt += dt;
-      if (G.pt >= CFG.game.thanksSec) {
-        const k = Math.min(1, (G.pt - CFG.game.thanksSec) / CFG.game.exitSec);
-        person.rotation.y += (Math.PI - person.rotation.y) * Math.min(1, dt * 12);
-        person.position.z = CFG.person.z + (CFG.game.doorZ - CFG.person.z) * k; walkPerson(person, G.time);
+      const p = G.people[G.leaving], gm = CFG.game;
+      if (G.pt >= gm.thanksSec) {
+        const k = Math.min(1, (G.pt - gm.thanksSec) / gm.exitSec), f = p.userData.from;
+        p.rotation.y += (Math.PI - p.rotation.y) * Math.min(1, dt * 12);
+        p.position.x = f[0] + (gm.doorX - f[0]) * k; p.position.z = f[1] + (gm.doorZ - f[1]) * k; walkPerson(p, G.time); walking.add(p);
         if (k >= 1) {
-          scene.remove(person); person = null; hudSpeech(null);
-          if (isFinished(G.S)) { G.mode = 'finishing'; G.pt = 0; } else spawnPassenger();
+          scene.remove(p); G.people[G.leaving] = null; G.leaving = -1; hudSpeech(null);
+          if (G.res.done) { if (isFinished(G.S)) { G.mode = 'finishing'; G.pt = 0; } else spawnGroup(); }
+          else { G.mode = 'idle'; G.waitT = 0; }
         }
       }
     } else if (G.mode === 'finishing') {
       G.pt += dt;
       if (G.pt >= CFG.game.resultDelay) {
-        G.mode = 'result'; const r = rankFor(G.S.score, G.S.total);
+        G.mode = 'result'; const r = rankFor(G.S.score, G.max);
         hudResult({ score: G.S.score, rank: r.rank, stars: r.stars, title: r.title }); sndFanfare();
       }
-    } else if (G.mode === 'idle' && person) {                // 台詞のあと一定秒数、何も操作しないと 1 回だけ「待たせた」
+    } else if (G.mode === 'idle' && G.people.some(Boolean)) {   // 台詞のあと一定秒数、何も操作しないと「待たせた」（進展があるまで 1 回だけ）
       G.waitT += dt;
-      if (G.waitT >= CFG.game.waitSec && !G.S.waited) popScore(scoreWait(G.S));
+      if (G.waitT >= CFG.game.waitSec && !G.S.waited) popScore([{ v: scoreWait(G.S), label: '' }]);
     }
 
     if (G.flash > 0) { G.flash = Math.max(0, G.flash - dt / CFG.move.chimeFlash); hudFlash((G.flash * 0.35).toFixed(3)); }
@@ -589,12 +816,13 @@ function hudResult(info) {                                         // info = { s
     const C = CFG.cam, sh = G.mode === 'moving' ? CFG.shake.amp : 0, k = G.time * CFG.shake.freq;
     camera.position.set(C.x + Math.sin(k * 1.3) * sh, C.y + Math.sin(k) * sh, C.z);
     camera.lookAt(C.lookX, C.lookY, C.lookZ);
-    if (person && G.mode !== 'boarding' && G.mode !== 'exiting') updatePerson(person, G.time);
-    else if (person && G.mode === 'exiting' && G.pt < CFG.game.thanksSec) updatePerson(person, G.time);   // ありがとうの間はその場で立つ
+    G.people.forEach(p => { if (p && !walking.has(p)) updatePerson(p, G.time); });
   }
 
   hudBuild(); bindInput(); fit();
   $('retry').addEventListener('pointerdown', e => { e.preventDefault(); inputFirstGesture(); sndResume(); sndClick(); startGame(); });
+  addEventListener('hashchange', () => { G.debugHash = null; startGame(); });   // #lv=4 などの切り替えを即反映（デバッグ用）
+  G.start = h => { G.debugHash = h; startGame(); };           // 確認用：GAME.start('#lv=4&n=2') でも同じ指定ができる（URL ハッシュが使えない環境向け）
   startGame();
   let last = performance.now();
   (function loop(now) {

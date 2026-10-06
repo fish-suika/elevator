@@ -27,9 +27,20 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
 // ---- Phase 2：スコア・台詞・リザルト ----
 function hudScore(S) { $('scoreN').textContent = S.score; $('leftN').textContent = remaining(S); }
 function hudSpeech(text) { const s = $('speech'); if (!text) { s.classList.remove('on'); return; } s.textContent = text; s.classList.add('on'); }
-function hudPop(delta) {                                           // 加点・減点を小さく浮かせる
+function hudEnabled() { HUD.btns.forEach((b, i) => b.classList.toggle('off', !isEnabled(i))); }   // 使える階が広がったらボタンを有効に
+function hudMemo(items) {                                          // 複数乗客のメモ [{ name, text, color, done }]。items が空 / CFG.game.showMemo=false なら隠す
+  const m = $('memo'); m.innerHTML = '';
+  if (!items || !items.length || !CFG.game.showMemo) { m.classList.remove('on'); return; }
+  items.forEach(it => {
+    const d = document.createElement('div'); d.className = 'm' + (it.done ? ' done' : '');
+    const dot = document.createElement('i'); dot.style.background = it.color; d.appendChild(dot);
+    d.appendChild(document.createTextNode(it.name + ':' + it.text)); m.appendChild(d);
+  });
+  m.classList.add('on');
+}
+function hudPop(delta, label) {                                    // 加点・減点を小さく浮かせる（label があれば「BONUS +30」）
   const p = document.createElement('div');
-  p.className = 'pop ' + (delta > 0 ? 'plus' : 'minus'); p.textContent = (delta > 0 ? '+' : '') + delta;
+  p.className = 'pop ' + (delta > 0 ? 'plus' : 'minus'); p.textContent = (label ? label + ' ' : '') + (delta > 0 ? '+' : '') + delta;
   p.style.animationDuration = CFG.game.popSec + 's';
   $('pops').appendChild(p); setTimeout(() => p.remove(), CFG.game.popSec * 1000 + 100);
 }

@@ -57,6 +57,11 @@
   #memo .m{display:flex;align-items:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*0.8) calc(var(--u)*2.4);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*4.2);font-weight:700;font-variant-numeric:tabular-nums}
   #memo .m i{width:calc(var(--u)*3);height:calc(var(--u)*3);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
   #memo .m.done{opacity:.4;text-decoration:line-through}
+  #regMemo{position:absolute;right:calc(var(--u)*3);top:calc(env(safe-area-inset-top) + var(--u)*15);z-index:5;pointer-events:none;display:none;flex-direction:column;align-items:flex-end;gap:calc(var(--u)*0.8);text-shadow:0 2px 8px #000}
+  #regMemo.on{display:flex}
+  #regMemo small{font-size:calc(var(--u)*2.6);letter-spacing:.1em;opacity:.8}
+  #regMemo .m{display:flex;align-items:center;gap:calc(var(--u)*1.4);padding:calc(var(--u)*0.5) calc(var(--u)*2);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*3.6);font-weight:700;font-variant-numeric:tabular-nums}
+  #regMemo .m i{width:calc(var(--u)*2.6);height:calc(var(--u)*2.6);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
   #speech{position:absolute;left:50%;top:calc(var(--u)*24);transform:translateX(-50%) scale(.9);z-index:5;max-width:80%;padding:calc(var(--u)*2.4) calc(var(--u)*4);
     border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.6);font-weight:700;letter-spacing:.04em;text-align:center;
     opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
@@ -102,6 +107,7 @@
   <div class="stat" id="statL"><small>SCORE</small><b id="scoreN">0</b></div>
   <div class="stat" id="statR"><small>残り</small><b id="leftN">12</b><small style="display:inline"> 組</small></div>
   <div id="memo"></div>
+  <div id="regMemo"></div>
   <div id="speech"></div>
   <div id="pops"></div>
   <div id="endBanner"></div>

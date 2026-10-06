@@ -34,7 +34,7 @@ function buildPlan(rng, g, dbg) {                                   // [{ lv, ki
     if (lv === 2) return { lv: lv, kind: 'change', n: 1 };
     if (lv === 3) return { lv: lv, kind: 'multi', n: pickOne(g.multiCounts, rng) };
     if (lv === 4) return { lv: lv, kind: 'mid', n: 1 };
-    if (lv === 6) { const kind = dbg && dbg.kind && k6s.indexOf(dbg.kind) >= 0 ? dbg.kind : k6s[k6++ % k6s.length]; return { lv: lv, kind: kind, n: kind === 'swap' ? 2 : 1 }; }
+    if (lv === 6) { const kind = dbg && dbg.kind && k6s.indexOf(dbg.kind) >= 0 ? dbg.kind : k6s[k6++ % k6s.length]; return { lv: lv, kind: kind, n: kind === 'swap' ? 3 : 1 }; }
     const kind = dbg && dbg.kind && ks.indexOf(dbg.kind) >= 0 ? dbg.kind : ks[k5++ % ks.length];
     return { lv: lv, kind: kind, n: 1 };
   });
@@ -104,10 +104,11 @@ function genOrder(entry, cur, rng, f, regulars) {   // regulars = [{ style, floo
       else { o.rule = 'any'; o.riders.push(rider('', -1)); }
       return o;
     }
-    case 'swap': {                                                  // 2 人が「交換しよう」と目的階を入れ替える（入れ替えは swapRiders）
-      if (others.length < 2) return simple();
-      const pool = others.slice(), a = pool.splice(Math.min(pool.length - 1, Math.floor(rng() * pool.length)), 1)[0], b = pickOne(pool, rng);
-      o = base('swap'); o.riders.push(rider('A', a)); o.riders.push(rider('B', b)); return o;
+    case 'swap': {                                                  // 3 人が別々の階を言い、1 人目が降りたあとに残る 2 人が行き先を変える（変更は rotateRiders）
+      if (others.length < 4) return simple();
+      const pool = others.slice(), names = ['A', 'B', 'C']; o = base('swap');
+      for (let k = 0; k < 3; k++) { const j = Math.min(pool.length - 1, Math.floor(rng() * pool.length)); o.riders.push(rider(names[k], pool.splice(j, 1)[0])); }
+      return o;
     }
     case 'ghost': {                                                 // 存在しない階：現存する最上階で扉を開ければ「無茶な注文を処理」
       const top = R[R.length - 1];
@@ -158,11 +159,17 @@ function offLine(o, r) {                                            // 降りる
   if (o.rule === 'any') return w + '……あ、初めてでした。ここでいいです';
   return w + 'ありがとうございます';
 }
-function swapRiders(o) {                                            // swap：A と B の目的階を入れ替える。台詞 [{ who, text }] を返す（もう済み・不成立なら null）
-  if (!o || o.kind !== 'swap' || o.swapped) return null;
-  const a = o.riders[0], b = o.riders[1]; if (!a || !b || a.off || b.off) return null;
-  o.swapped = true; const t = a.dest; a.dest = b.dest; b.dest = t;
-  return [{ who: 'A', text: 'え、そっちもその辺？ 目的地、交換しよう' }, { who: 'B', text: 'いいよ。Aは' + floorSpeech(a.dest) + '、僕は' + floorSpeech(b.dest) + 'ね' }];
+// swap：3 人のうち 1 人が降りて 2 人が残ったところ（cur = いまいる階）で、残る 2 人が行き先を変える。
+// 先に言う方（x）は「もう一人（y）と同じ階」に、y は「まだ誰も行かない別の階」に。止まる階の集合が実際に変わる（{x, y} → {y, 新しい階}）。
+// 台詞 [{ who, text }] を返す（まだ・済み・不成立なら null）。HUD のメモは自動では直らない（rider.shown に古い表示を残す）
+function rotateRiders(o, cur, rng, f) {
+  if (!o || o.kind !== 'swap' || o.swapped || o.riders.length !== 3 || orderLeft(o) !== 2) return null;
+  const rest = o.riders.filter(r => !r.off), x = rest[0], y = rest[1];
+  const pool = floorsIn(f).filter(i => i !== cur && i !== x.dest && i !== y.dest); if (!pool.length) return null;
+  const n = pickOne(pool, rng || Math.random);
+  x.shown = x.dest; y.shown = y.dest; o.swapped = true;
+  x.dest = y.dest; y.dest = n;
+  return [{ who: x.name, text: 'ごめん、行き先変えます。' + y.name + 'さんと同じ' + floorSpeech(x.dest) + 'で' }, { who: y.name, text: 'じゃあ私は' + floorSpeech(y.dest) + 'にします' }];
 }
 function sameStopJudges(o, idx) { return !!o && o.rule === 'ghost' && idx === o.top && orderLeft(o) > 0; }   // 最上階にいるまま「開く」を押しても判定する（ghost で最上階から乗った場合）
 function orderLeft(o) { return o.riders.filter(r => !r.off).length; }
@@ -187,7 +194,7 @@ function resolveStop(S, o, idx, g) {
   const hit = o.riders.findIndex(r => !r.off && r.dest === idx), pending = o.seqDone < o.seq.length;
   const wrong = kind => { res.wrong = true; res.wrongKind = kind; const d = scoreWrong(S, g); if (d) res.deltas.push({ v: d, label: '' }); };
   const getOff = k => {                                             // k 番目の乗客が降りる（全員降りたら組終了＋ボーナス）
-    o.riders[k].off = true; res.off = k; res.deltas.push({ v: scoreOff(S, g), label: '' });
+    o.riders[k].off = true; o.riders[k].offAt = idx; res.off = k; res.deltas.push({ v: scoreOff(S, g), label: '' });
     if (!orderLeft(o)) {
       res.done = true;
       const b = g.bonus[o.kind] || 0;

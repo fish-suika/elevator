@@ -14,8 +14,9 @@ const CFG = {
     lv5Kinds: ['via', 'pass', 'forbid', 'viaOpen'],                 // Lv5 の特殊注文の種類（組ごとに順繰りで混ぜる）
     lv6Kinds: ['basement', 'up', 'usual', 'swap', 'ghost'],         // Lv6 のバカゲー注文（この順に 1 組ずつ。#lv=6&kind=ghost で固定）
     ghostFloors: [13, 44, 99, 20],                                  // 「存在しない階」の候補（100 階はエンディング専用）
-    swapSec: 3,                                                     // swap：乗ってから（または動き出してから）目的階の交換が起きるまでの秒
-    regularPool: 3,                                                 // usual：直近に降りた客のうち何人までを「常連」の候補にするか
+    swapMemoAuto: false,                                            // swap：行き先が変わったとき、HUD のメモも自動で直すか（false = 台詞を聞いて自分で直す）
+    showRegularMemo: true,                                         // usual：降りた客の「見た目→最後に降りた階」を HUD に残すか（Lv6 の間だけ表示）
+    regularPool: 5,                                                 // usual：直近に降りた客のうち何人までを「常連」の候補にするか（見た目 5 種ぶん＝全員）
     multiCounts: [2, 3],                                            // Lv3 の同時乗客数の候補
     correct: 100, wrong: -50, wait: -10,                           // 降りた（正解）／間違い停止（同じ組では 1 回だけ）／待たせた（進展のあとは 1 回だけ）
     bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0,

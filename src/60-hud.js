@@ -58,3 +58,13 @@ function hudResult(info) {                                         // info = { s
 function hudLabel(text) { $('curN').textContent = text; HUD.btns.forEach(b => b.classList.remove('here')); }   // 実在しない階の表示（ボタンの「今ここ」は消す）
 function hudDim(a) { $('dim').style.opacity = a; }
 function hudBanner(text) { const b = $('endBanner'); if (!text) { b.classList.remove('on'); return; } b.textContent = text; b.classList.add('on'); }
+function hudRegMemo(items) {                                       // 常連メモ（見た目＝シャツ色ごとに最後に降りた階）[{ color, name, text }]。空なら隠す
+  const m = $('regMemo'); m.innerHTML = '';
+  if (!items || !items.length) { m.classList.remove('on'); return; }
+  const h = document.createElement('small'); h.textContent = '常連メモ'; m.appendChild(h);
+  items.forEach(it => {
+    const d = document.createElement('div'); d.className = 'm'; const dot = document.createElement('i'); dot.style.background = it.color; d.appendChild(dot);
+    d.appendChild(document.createTextNode(it.name + ':' + it.text)); m.appendChild(d);
+  });
+  m.classList.add('on');
+}

@@ -7,6 +7,7 @@ const PERSON_STYLES = [
   { skin: 0x8d5a3c, hair: 0x1b1410, shirt: 0xe0a32e, pants: 0x30343f }    // 黄
 ];
 
+const STYLE_NAMES = ['青', '赤', '緑', '紫', '黄'];             // 常連メモ用の呼び名（シャツの色）
 function makePerson(style) {
   const s = typeof style === 'number' ? PERSON_STYLES[style % PERSON_STYLES.length] : (style || PERSON_STYLES[0]);
   const mat = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, metalness: 0 });

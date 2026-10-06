@@ -49,7 +49,7 @@ function buildCar(scene) {
   CAR.dispCtx = CAR.dispCanvas.getContext('2d');
   CAR.dispTex = new THREE.CanvasTexture(CAR.dispCanvas);
   const disp = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.4), new THREE.MeshBasicMaterial({ map: CAR.dispTex }));
-  disp.position.set(0, C.doorH + 0.37, C.zBack + 0.012); scene.add(disp);
+  disp.position.set(0, C.doorH + 0.37, C.zBack + 0.03); scene.add(disp);   // 背面の箱（厚さ 0.03、前面 +0.015）より手前に
   scene.add(boxMesh(0.9, 0.5, 0.03, 0x15171c, 0, C.doorH + 0.37, C.zBack + 0.0));
   carSetDisplay('1F', 0);
 

@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 cat src/00-head.html \
     src/10-config.js \
     src/20-floors.js \
+    src/25-game.js \
     src/22-sound.js \
     src/30-car.js \
     src/40-people.js \
@@ -19,6 +20,7 @@ cp elevator.html index.html   # GitHub Pages はルートの index.html を配�
 cat src/verify-head.html \
     src/10-config.js \
     src/20-floors.js \
+    src/25-game.js \
     src/verify-tests.js \
     src/99-tail.html > verify.html
 

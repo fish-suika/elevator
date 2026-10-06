@@ -35,3 +35,6 @@ function sndRumbleStop() {
   r.g.gain.cancelScheduledValues(c.currentTime); r.g.gain.setValueAtTime(Math.max(r.g.gain.value, 0.0001), c.currentTime); r.g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.25);
   r.o.stop(c.currentTime + 0.3);
 }
+function sndCorrect() { sndTone(784, 0, 0.18, 'triangle', 0.4); sndTone(1175, 0.12, 0.35, 'triangle', 0.4); }          // 正解：上がる 2 音
+function sndMiss() { sndTone(300, 0, 0.16, 'sawtooth', 0.18); sndTone(210, 0.14, 0.3, 'sawtooth', 0.18); }              // 間違い：下がる 2 音
+function sndFanfare() { [523, 659, 784, 1047].forEach((f, k) => sndTone(f, k * 0.13, 0.4, 'triangle', 0.35)); }         // リザルト

@@ -48,5 +48,13 @@ function updatePerson(p, t) {
   u.head.rotation.z = Math.sin(t * 0.9 + u.phase) * 0.03;
   u.arms[0].rotation.x = Math.sin(k * 0.8) * 0.05; u.arms[1].rotation.x = -Math.sin(k * 0.8) * 0.05;
   u.arms[0].rotation.z = 0.04; u.arms[1].rotation.z = -0.04;
+  u.legs[0].rotation.x = 0; u.legs[1].rotation.x = 0;
   p.rotation.z = Math.sin(t * 0.7 + u.phase) * 0.012;
+}
+
+// 歩き（乗り降り用）。脚と腕を振る
+function walkPerson(p, t) {
+  const u = p.userData, s = Math.sin(t * 9);
+  u.legs[0].rotation.x = s * 0.6; u.legs[1].rotation.x = -s * 0.6;
+  u.arms[0].rotation.x = -s * 0.5; u.arms[1].rotation.x = s * 0.5;
 }

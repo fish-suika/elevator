@@ -47,6 +47,30 @@
   #ctl button:active{transform:translateY(2px);box-shadow:0 1px 0 #090b0f}
   #ctl span{display:block;font-size:calc(var(--u)*7);line-height:1.1;margin-bottom:2px}
 
+  /* ---- Phase 2：スコア・台詞・リザルト ---- */
+  .stat{position:absolute;top:calc(env(safe-area-inset-top) + var(--u)*3);z-index:5;pointer-events:none;line-height:1.15;text-shadow:0 2px 8px #000}
+  .stat small{display:block;font-size:calc(var(--u)*2.6);letter-spacing:.1em;opacity:.8}
+  .stat b{font-size:calc(var(--u)*6);color:var(--amber);font-variant-numeric:tabular-nums}
+  #statL{left:calc(var(--u)*3)} #statR{right:calc(var(--u)*3);text-align:right}
+  #speech{position:absolute;left:50%;top:calc(var(--u)*24);transform:translateX(-50%) scale(.9);z-index:5;max-width:80%;padding:calc(var(--u)*2.4) calc(var(--u)*4);
+    border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.6);font-weight:700;letter-spacing:.04em;text-align:center;
+    opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+  #speech.on{opacity:1;transform:translateX(-50%) scale(1)}
+  #speech::after{content:"";position:absolute;left:50%;bottom:calc(var(--u)*-2.2);margin-left:calc(var(--u)*-1.5);border:calc(var(--u)*1.8) solid transparent;border-top-color:#fffdf5;border-bottom:0}
+  #pops{position:absolute;left:50%;top:calc(var(--u)*20);z-index:6;pointer-events:none}
+  .pop{position:absolute;left:0;transform:translateX(-50%);font-size:calc(var(--u)*6.5);font-weight:900;white-space:nowrap;text-shadow:0 2px 8px #000;animation:floatUp 1s ease-out forwards}
+  .pop.plus{color:#7ee08c} .pop.minus{color:#ff7b6b}
+  @keyframes floatUp{0%{opacity:0;margin-top:calc(var(--u)*3)}15%{opacity:1}100%{opacity:0;margin-top:calc(var(--u)*-8)}}
+  #result{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*3);background:rgba(6,8,12,.92);text-align:center}
+  #result.on{display:flex}
+  #result h2{font-size:calc(var(--u)*6);letter-spacing:.2em;font-weight:700}
+  #resStars{font-size:calc(var(--u)*11);color:var(--amber);letter-spacing:.1em}
+  #resRank{font-size:calc(var(--u)*26);font-weight:900;color:var(--amber);line-height:1;text-shadow:0 0 24px rgba(255,170,50,.6)}
+  #resScoreRow{font-size:calc(var(--u)*5.5)} #resScore{font-size:calc(var(--u)*9);font-weight:700;color:var(--amber)}
+  #resTitle{font-size:calc(var(--u)*5.6);padding:0 calc(var(--u)*6)}
+  #retry{margin-top:calc(var(--u)*4);padding:calc(var(--u)*3.5) calc(var(--u)*12);border:2px solid #aab3c2;border-radius:calc(var(--u)*4);background:linear-gradient(#3b4252,#252a34);color:var(--ink);font-size:calc(var(--u)*5.6);font-weight:700;letter-spacing:.2em}
+  #retry:active{transform:translateY(2px)}
+
   /* ---- 到着フラッシュ ---- */
   #flash{position:absolute;left:0;right:0;top:0;height:62%;z-index:4;background:#fff;opacity:0;pointer-events:none}
 
@@ -64,6 +88,18 @@
   <div id="flash"></div>
   <div id="top"><div id="cur">現在階：<b id="curN">1F</b><span id="arrow"></span></div></div>
   <div id="msg"></div>
+  <div class="stat" id="statL"><small>SCORE</small><b id="scoreN">0</b></div>
+  <div class="stat" id="statR"><small>残り</small><b id="leftN">8</b><small style="display:inline"> 人</small></div>
+  <div id="speech"></div>
+  <div id="pops"></div>
+  <div id="result">
+    <h2>本日の勤務終了</h2>
+    <div id="resStars"></div>
+    <div id="resRank"></div>
+    <div id="resTitle"></div>
+    <div id="resScoreRow">スコア <span id="resScore">0</span></div>
+    <button id="retry">もう一度</button>
+  </div>
   <div id="panel">
     <div id="grid"></div>
     <div id="ctl">
@@ -84,7 +120,22 @@ const CFG = {
   car: { w: 2.8, h: 2.9, zBack: -1.5, zFront: 2.6, doorW: 1.4, doorH: 2.2 },
   cam: { x: 0.3, y: 1.45, z: 2.2, lookX: 0, lookY: 1.3, lookZ: -1.5, hfov: 62 },   // 固定カメラ（hfov は横方向の画角。縦横比が変わっても横幅は同じ）
   person: { x: -0.35, z: -0.1, scale: 1 },
-  audio: { master: 0.22 }
+  audio: { master: 0.22 },
+  game: {
+    passengers: 8,                                                 // 1 プレイの乗客数
+    correct: 100, wrong: -50, wait: -10,                           // 正解／間違い到着（同じ客では 1 回だけ）／待たせた（同じ客では 1 回だけ）
+    waitSec: 10,                                                   // 台詞のあと何秒操作しないと「待たせた」になるか
+    boardSec: 1.1, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1,      // 乗る・「ありがとう」の間・降りる秒数／扉の向こう側の z（出入りの起点）
+    resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
+    ranks: [                                                       // 満点に対する割合 min 以上で上から判定
+      { min: 0.95, rank: 'S', stars: 5, title: '完璧なエレベーター係' },
+      { min: 0.80, rank: 'A', stars: 4, title: '普通のエレベーター係' },
+      { min: 0.60, rank: 'B', stars: 3, title: 'ボタン押し職人' },
+      { min: 0.40, rank: 'C', stars: 2, title: '客に振り回された人' },
+      { min: 0.15, rank: 'C', stars: 1, title: 'エレベーター向いてない' },
+      { min: 0,    rank: 'C', stars: 1, title: 'なぜこの仕事を選んだ' }
+    ]
+  }
 };
 // ===== 階リストと移動の純粋ロジック（three.js 非依存） =====
 const FLOOR_NUMS = [-2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];       // インデックス 0..11 = B2 B1 1F … 10F（0階は無い）
@@ -109,6 +160,33 @@ function keyToIndex(k) {                                            // 数字キ
   return floorIndexOf(k === '0' ? 10 : Number(k));
 }
 function gridIndices() { return FLOOR_NUMS.map((_, i) => FLOOR_NUMS.length - 1 - i); }   // ボタン表示順（3列×4段、上が高い階）
+// ===== ゲームの純粋ロジック（目的階・スコア・ランク。three.js 非依存で verify からも使う） =====
+function floorSpeech(i) { const n = FLOOR_NUMS[i]; return n < 0 ? '地下' + (-n) + '階' : n + '階'; }   // 台詞用（「3階」「地下1階」）
+
+// 現在階以外の使用可能階からランダムに 1 つ選ぶ（選べる階が無ければ -1）
+function pickDest(cur, rng, f) {
+  rng = rng || Math.random;
+  const r = enabledRange(f), c = [];
+  for (let i = r[0]; i <= r[1]; i++) if (i !== cur) c.push(i);
+  if (!c.length) return -1;
+  return c[Math.min(c.length - 1, Math.floor(rng() * c.length))];
+}
+
+// スコア状態。missed / waited は「今の乗客に対してもう減点したか」（同じ客では 1 回だけ）
+function newScore(total) { return { score: 0, total: total, served: 0, missed: false, waited: false }; }
+function scoreCorrect(S, g) { g = g || CFG.game; S.score += g.correct; S.served++; S.missed = false; S.waited = false; return g.correct; }
+function scoreWrong(S, g) { g = g || CFG.game; if (S.missed) return 0; S.missed = true; S.score += g.wrong; return g.wrong; }
+function scoreWait(S, g) { g = g || CFG.game; if (S.waited) return 0; S.waited = true; S.score += g.wait; return g.wait; }
+function remaining(S) { return S.total - S.served; }
+function isFinished(S) { return S.served >= S.total; }
+
+// ランク。満点（全員正解）に対する割合で ranks の上から最初に当てはまるもの
+function rankFor(score, total, g) {
+  g = g || CFG.game;
+  const ratio = Math.max(0, Math.min(1, score / (total * g.correct)));
+  for (let k = 0; k < g.ranks.length; k++) if (ratio >= g.ranks[k].min) return g.ranks[k];
+  return g.ranks[g.ranks.length - 1];
+}
 // ===== 音（WebAudio。最初のタップで有効化。無くても成立） =====
 const SND = { ctx: null, master: null, rumble: null };
 function sndInit() {
@@ -146,6 +224,9 @@ function sndRumbleStop() {
   r.g.gain.cancelScheduledValues(c.currentTime); r.g.gain.setValueAtTime(Math.max(r.g.gain.value, 0.0001), c.currentTime); r.g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.25);
   r.o.stop(c.currentTime + 0.3);
 }
+function sndCorrect() { sndTone(784, 0, 0.18, 'triangle', 0.4); sndTone(1175, 0.12, 0.35, 'triangle', 0.4); }          // 正解：上がる 2 音
+function sndMiss() { sndTone(300, 0, 0.16, 'sawtooth', 0.18); sndTone(210, 0.14, 0.3, 'sawtooth', 0.18); }              // 間違い：下がる 2 音
+function sndFanfare() { [523, 659, 784, 1047].forEach((f, k) => sndTone(f, k * 0.13, 0.4, 'triangle', 0.35)); }         // リザルト
 // ===== エレベーター内部（3D）。すべてプリミティブ =====
 const CAR = { doorL: null, doorR: null, hall: null, hallMat: null, dispTex: null, dispCtx: null, dispCanvas: null, lamp: null };
 
@@ -296,7 +377,15 @@ function updatePerson(p, t) {
   u.head.rotation.z = Math.sin(t * 0.9 + u.phase) * 0.03;
   u.arms[0].rotation.x = Math.sin(k * 0.8) * 0.05; u.arms[1].rotation.x = -Math.sin(k * 0.8) * 0.05;
   u.arms[0].rotation.z = 0.04; u.arms[1].rotation.z = -0.04;
+  u.legs[0].rotation.x = 0; u.legs[1].rotation.x = 0;
   p.rotation.z = Math.sin(t * 0.7 + u.phase) * 0.012;
+}
+
+// 歩き（乗り降り用）。脚と腕を振る
+function walkPerson(p, t) {
+  const u = p.userData, s = Math.sin(t * 9);
+  u.legs[0].rotation.x = s * 0.6; u.legs[1].rotation.x = -s * 0.6;
+  u.arms[0].rotation.x = -s * 0.5; u.arms[1].rotation.x = s * 0.5;
 }
 // ===== 入力（コールバック経由。操作の意味づけは 90-boot.js） =====
 const INPUT = { onFloor: null, onOpen: null, onClose: null, onFirst: null };
@@ -344,6 +433,24 @@ function hudLit(i, on) { if (HUD.btns[i]) HUD.btns[i].classList.toggle('lit', on
 function hudFlash(a) { $('flash').style.opacity = a; }
 let msgTimer = 0;
 function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.add('on'); clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.remove('on'), 1400); }
+
+// ---- Phase 2：スコア・台詞・リザルト ----
+function hudScore(S) { $('scoreN').textContent = S.score; $('leftN').textContent = remaining(S); }
+function hudSpeech(text) { const s = $('speech'); if (!text) { s.classList.remove('on'); return; } s.textContent = text; s.classList.add('on'); }
+function hudPop(delta) {                                           // 加点・減点を小さく浮かせる
+  const p = document.createElement('div');
+  p.className = 'pop ' + (delta > 0 ? 'plus' : 'minus'); p.textContent = (delta > 0 ? '+' : '') + delta;
+  p.style.animationDuration = CFG.game.popSec + 's';
+  $('pops').appendChild(p); setTimeout(() => p.remove(), CFG.game.popSec * 1000 + 100);
+}
+function hudResult(info) {                                         // info = { score, rank, stars, title } か null（閉じる）
+  const r = $('result');
+  if (!info) { r.classList.remove('on'); return; }
+  $('resScore').textContent = info.score;
+  $('resStars').textContent = '★'.repeat(info.stars) + '☆'.repeat(5 - info.stars);
+  $('resRank').textContent = info.rank; $('resTitle').textContent = info.title;
+  r.classList.add('on');
+}
 // ===== 起動とメインループ・エレベーターの動き =====
 // mode: idle（扉は開閉どちらでも・操作可）→ closing（扉を閉じる）→ moving（1階ずつ）→ arrived（チャイム）→ opening → idle
 (function boot() {
@@ -356,9 +463,7 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
   const scene = new THREE.Scene();
   buildCar(scene);
   const camera = new THREE.PerspectiveCamera(60, 9 / 16, 0.1, 40);
-  const person = makePerson(0);
-  person.position.set(CFG.person.x, 0, CFG.person.z); person.scale.setScalar(CFG.person.scale);
-  scene.add(person);
+  let person = null;                                         // 今の乗客（乗る前・降りたあとは null）
 
   function fit() {                                           // 枠の大きさに合わせる。文字の基準 --u は枠の幅の 1/100
     const w = view.clientWidth, h = view.clientHeight;
@@ -372,14 +477,43 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
   addEventListener('resize', fit); addEventListener('orientationchange', fit);
 
   // ---- 状態 ----
-  const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0, style: 0 };
+  // mode に Phase 2 で boarding（乗る）/ exiting（ありがとう→降りる）/ finishing（最後の客のあと）/ result を追加。idle 以外は操作を受け付けない
+  const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0, style: 0,
+              S: newScore(CFG.game.passengers), want: -1, pt: 0, waitT: 0, styleBase: 0 };   // want = 乗客の目的階、pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒
   window.GAME = G;                                           // 確認用
   const busy = () => G.mode !== 'idle';
 
   function setDoorTarget(v) { if (G.doorTarget !== v) sndDoor(); G.doorTarget = v; }
 
+  // ---- 乗客 ----
+  function spawnPassenger() {                                // 扉の向こうから現れて歩いて入る
+    if (person) scene.remove(person);
+    person = makePerson(G.styleBase + G.S.served);           // 見た目は順繰り
+    person.position.set(CFG.person.x, 0, CFG.game.doorZ); person.scale.setScalar(CFG.person.scale);
+    scene.add(person);
+    G.want = pickDest(G.idx);
+    hudSpeech(null); G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
+  }
+  function startGame() {
+    G.S = newScore(CFG.game.passengers); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
+    G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
+    spawnPassenger();
+  }
+  function popScore(d) { if (d) { hudPop(d); hudScore(G.S); } }
+  function judgeArrival() {                                  // 扉が開ききったところで目的階と照らし合わせる
+    if (G.idx === G.want) {
+      popScore(scoreCorrect(G.S)); sndCorrect(); hudSpeech('ありがとうございます');
+      G.mode = 'exiting'; G.pt = 0;
+    } else {
+      const d = scoreWrong(G.S); popScore(d); sndMiss();
+      hudSpeech((d ? 'えっ、ここ？ ' : 'そこじゃないです… ') + floorSpeech(G.want) + 'です');
+      G.mode = 'idle'; G.waitT = 0;
+    }
+  }
+  function touch() { G.waitT = 0; }                          // 操作したら「待たせた」タイマーをやり直す
+
   function pressFloor(i) {
-    inputFirstGesture(); sndResume();
+    inputFirstGesture(); sndResume(); touch();
     if (!isEnabled(i)) { return; }
     if (busy()) { sndBad(); return; }                        // 移動中は受け付けない
     sndClick();
@@ -389,8 +523,8 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
     setDoorTarget(0); G.mode = 'closing'; G.t = 0;
   }
   INPUT.onFloor = pressFloor;
-  INPUT.onOpen = () => { inputFirstGesture(); sndResume(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); };
-  INPUT.onClose = () => { inputFirstGesture(); sndResume(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
+  INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touch(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); };
+  INPUT.onClose = () => { inputFirstGesture(); sndResume(); touch(); if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
   INPUT.onFirst = () => { sndInit(); sndResume(); };
 
   function showFloor() { hudSetFloor(G.idx); carSetDisplay(floorLabel(G.idx), G.mode === 'moving' ? G.dir : 0); carSetHall(G.idx); }
@@ -420,7 +554,33 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
     } else if (G.mode === 'arrived') {
       if (G.t >= CFG.move.arriveWait) { G.mode = 'opening'; G.t = 0; setDoorTarget(1); }
     } else if (G.mode === 'opening') {
-      if (G.door >= 1) { G.mode = 'idle'; G.dest = -1; }
+      if (G.door >= 1) { G.dest = -1; judgeArrival(); }
+    } else if (G.mode === 'boarding') {                      // 扉が開いてから、奥から歩いて入ってくる
+      if (G.door >= 1) {
+        G.pt += dt; const k = Math.min(1, G.pt / CFG.game.boardSec);
+        person.position.z = CFG.game.doorZ + (CFG.person.z - CFG.game.doorZ) * k; walkPerson(person, G.time);
+        if (k >= 1) { G.mode = 'idle'; G.waitT = 0; hudSpeech(floorSpeech(G.want) + 'お願いします'); }
+      }
+    } else if (G.mode === 'exiting') {                       // 「ありがとうございます」→ 振り向いて扉から出ていく
+      G.pt += dt;
+      if (G.pt >= CFG.game.thanksSec) {
+        const k = Math.min(1, (G.pt - CFG.game.thanksSec) / CFG.game.exitSec);
+        person.rotation.y += (Math.PI - person.rotation.y) * Math.min(1, dt * 12);
+        person.position.z = CFG.person.z + (CFG.game.doorZ - CFG.person.z) * k; walkPerson(person, G.time);
+        if (k >= 1) {
+          scene.remove(person); person = null; hudSpeech(null);
+          if (isFinished(G.S)) { G.mode = 'finishing'; G.pt = 0; } else spawnPassenger();
+        }
+      }
+    } else if (G.mode === 'finishing') {
+      G.pt += dt;
+      if (G.pt >= CFG.game.resultDelay) {
+        G.mode = 'result'; const r = rankFor(G.S.score, G.S.total);
+        hudResult({ score: G.S.score, rank: r.rank, stars: r.stars, title: r.title }); sndFanfare();
+      }
+    } else if (G.mode === 'idle' && person) {                // 台詞のあと一定秒数、何も操作しないと 1 回だけ「待たせた」
+      G.waitT += dt;
+      if (G.waitT >= CFG.game.waitSec && !G.S.waited) popScore(scoreWait(G.S));
     }
 
     if (G.flash > 0) { G.flash = Math.max(0, G.flash - dt / CFG.move.chimeFlash); hudFlash((G.flash * 0.35).toFixed(3)); }
@@ -429,11 +589,13 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
     const C = CFG.cam, sh = G.mode === 'moving' ? CFG.shake.amp : 0, k = G.time * CFG.shake.freq;
     camera.position.set(C.x + Math.sin(k * 1.3) * sh, C.y + Math.sin(k) * sh, C.z);
     camera.lookAt(C.lookX, C.lookY, C.lookZ);
-    updatePerson(person, G.time);
+    if (person && G.mode !== 'boarding' && G.mode !== 'exiting') updatePerson(person, G.time);
+    else if (person && G.mode === 'exiting' && G.pt < CFG.game.thanksSec) updatePerson(person, G.time);   // ありがとうの間はその場で立つ
   }
 
   hudBuild(); bindInput(); fit();
-  showFloor();
+  $('retry').addEventListener('pointerdown', e => { e.preventDefault(); inputFirstGesture(); sndResume(); sndClick(); startGame(); });
+  startGame();
   let last = performance.now();
   (function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;

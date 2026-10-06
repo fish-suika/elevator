@@ -48,7 +48,13 @@ function hudResult(info) {                                         // info = { s
   const r = $('result');
   if (!info) { r.classList.remove('on'); return; }
   $('resScore').textContent = info.score;
+  $('resHead').textContent = info.heading || '本日の勤務終了';
   $('resStars').textContent = '★'.repeat(info.stars) + '☆'.repeat(5 - info.stars);
   $('resRank').textContent = info.rank; $('resTitle').textContent = info.title;
   r.classList.add('on');
 }
+
+// ---- Phase 4：エンディング ----
+function hudLabel(text) { $('curN').textContent = text; HUD.btns.forEach(b => b.classList.remove('here')); }   // 実在しない階の表示（ボタンの「今ここ」は消す）
+function hudDim(a) { $('dim').style.opacity = a; }
+function hudBanner(text) { const b = $('endBanner'); if (!text) { b.classList.remove('on'); return; } b.textContent = text; b.classList.add('on'); }

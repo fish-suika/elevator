@@ -76,6 +76,11 @@
   #retry{margin-top:calc(var(--u)*4);padding:calc(var(--u)*3.5) calc(var(--u)*12);border:2px solid #aab3c2;border-radius:calc(var(--u)*4);background:linear-gradient(#3b4252,#252a34);color:var(--ink);font-size:calc(var(--u)*5.6);font-weight:700;letter-spacing:.2em}
   #retry:active{transform:translateY(2px)}
 
+  /* ---- Phase 4：エンディングの暗転・「本日の勤務終了」 ---- */
+  #dim{position:absolute;left:0;right:0;top:0;height:62%;z-index:3;background:#000;opacity:0;pointer-events:none}
+  #endBanner{position:absolute;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;background:rgba(244,244,240,.94);color:#22232a;font-size:calc(var(--u)*8.5);font-weight:700;letter-spacing:.2em;opacity:0;pointer-events:none;transition:opacity 1s}
+  #endBanner.on{opacity:1}
+
   /* ---- 到着フラッシュ ---- */
   #flash{position:absolute;left:0;right:0;top:0;height:62%;z-index:4;background:#fff;opacity:0;pointer-events:none}
 
@@ -91,6 +96,7 @@
 <div id="stage">
   <div id="view"></div>
   <div id="flash"></div>
+  <div id="dim"></div>
   <div id="top"><div id="cur">現在階：<b id="curN">1F</b><span id="arrow"></span></div></div>
   <div id="msg"></div>
   <div class="stat" id="statL"><small>SCORE</small><b id="scoreN">0</b></div>
@@ -98,8 +104,9 @@
   <div id="memo"></div>
   <div id="speech"></div>
   <div id="pops"></div>
+  <div id="endBanner"></div>
   <div id="result">
-    <h2>本日の勤務終了</h2>
+    <h2 id="resHead">本日の勤務終了</h2>
     <div id="resStars"></div>
     <div id="resRank"></div>
     <div id="resTitle"></div>

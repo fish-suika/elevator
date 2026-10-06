@@ -98,3 +98,6 @@ function carSetHall(idx) {
   const hue = (idx * 0.083 + 0.08) % 1;
   CAR.hallMat.color.setHSL(hue, 0.35, 0.72);
 }
+
+// 謎の階：扉の向こうを真っ白な「何もない空間」にする（次に carSetHall が呼ばれると元に戻る）
+function carSetVoid() { CAR.hallMat.color.setHex(0xffffff); }

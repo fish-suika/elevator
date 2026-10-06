@@ -39,3 +39,11 @@ function sndCorrect() { sndTone(784, 0, 0.18, 'triangle', 0.4); sndTone(1175, 0.
 function sndMiss() { sndTone(300, 0, 0.16, 'sawtooth', 0.18); sndTone(210, 0.14, 0.3, 'sawtooth', 0.18); }              // 間違い：下がる 2 音
 function sndFanfare() { [523, 659, 784, 1047].forEach((f, k) => sndTone(f, k * 0.13, 0.4, 'triangle', 0.35)); }         // リザルト
 function sndNote() { sndTone(988, 0, 0.12, 'triangle', 0.3); sndTone(1318, 0.09, 0.16, 'triangle', 0.25); }                // 経由・変更など「進んだ」合図（得点なし）
+// エンディング：上昇が進むほど音が高く・大きくなる（p = 0〜1）
+function sndRumbleRise(p) {
+  const c = SND.ctx, r = SND.rumble; if (!c || !r) return;
+  r.o.frequency.setTargetAtTime(70 + (CFG.ending.rumbleHz - 70) * p, c.currentTime, 0.12);
+  r.g.gain.setTargetAtTime(0.35 + 0.4 * p, c.currentTime, 0.12);
+}
+function sndTickRise(p) { sndTone(520 + 700 * p, 0, 0.05, 'triangle', 0.14); }
+function sndEndChime() { sndTone(587, 0, 1.2, 'sine', 0.4); sndTone(440, 0.4, 1.6, 'sine', 0.4); sndTone(294, 0.9, 2.2, 'sine', 0.35); }   // 謎の階：ゆっくり下がる 3 音

@@ -30,12 +30,18 @@ const CFG = {
   person: { x: -0.35, z: -0.1, scale: 1 },
   audio: { master: 0.22 },
   game: {
-    levelPlan: [1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5],                // 組ごとのレベル（長さ = 1 プレイの客の組数）。序盤は単純、徐々に混ざる
-    enabledMaxByLv: { 1: 5, 2: 5, 3: 7, 4: 7, 5: 10 },              // レベルごとに使える最上階（階番号）。組が始まるたびに CFG.floors.enabledMax へ反映
+    levelPlan: [1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 6, 6],   // 組ごとのレベル（長さ = 1 プレイの客の組数）。序盤は単純、徐々に混ざる。Lv6 = バカゲー注文（終わったらエンディング）
+    enabledMaxByLv: { 1: 5, 2: 5, 3: 7, 4: 7, 5: 10, 6: 10 },        // レベルごとに使える最上階（階番号）。組が始まるたびに CFG.floors.enabledMax へ反映
+    enabledMinByLv: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: -2 },        // レベルごとに使える最下階（Lv6 で地下 B2 まで解放）
     lv5Kinds: ['via', 'pass', 'forbid', 'viaOpen'],                 // Lv5 の特殊注文の種類（組ごとに順繰りで混ぜる）
+    lv6Kinds: ['basement', 'up', 'usual', 'swap', 'ghost'],         // Lv6 のバカゲー注文（この順に 1 組ずつ。#lv=6&kind=ghost で固定）
+    ghostFloors: [13, 44, 99, 20],                                  // 「存在しない階」の候補（100 階はエンディング専用）
+    swapSec: 3,                                                     // swap：乗ってから（または動き出してから）目的階の交換が起きるまでの秒
+    regularPool: 3,                                                 // usual：直近に降りた客のうち何人までを「常連」の候補にするか
     multiCounts: [2, 3],                                            // Lv3 の同時乗客数の候補
     correct: 100, wrong: -50, wait: -10,                           // 降りた（正解）／間違い停止（同じ組では 1 回だけ）／待たせた（進展のあとは 1 回だけ）
-    bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0 },   // 無茶な注文をノーミスで処理したときのボーナス（種類別）
+    bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0,
+              basement: 20, up: 20, usual: 40, swap: 30, ghost: 50 },   // 無茶な注文をノーミスで処理したときのボーナス（種類別）
     waitSec: 10,                                                   // 台詞のあと何秒操作しないと「待たせた」になるか
     boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
     sayGap: 1.5,                                                   // 複数乗客が順に台詞を言う間隔（秒）
@@ -48,7 +54,7 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
-    ranks: [                                                       // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
+    ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
       { min: 0.95, rank: 'S', stars: 5, title: '完璧なエレベーター係' },
       { min: 0.80, rank: 'A', stars: 4, title: '普通のエレベーター係' },
       { min: 0.60, rank: 'B', stars: 3, title: 'ボタン押し職人' },
@@ -57,6 +63,24 @@ const CFG = {
       { min: 0,    rank: 'C', stars: 1, title: 'なぜこの仕事を選んだ' }
     ]
   }
+};
+
+// ===== エンディング（最後の客「100階お願いします」→ 存在しない階へ上がり続ける → 謎の階） =====
+CFG.ending = {
+  style: { skin: 0xeadcc8, hair: 0xd8d8dc, shirt: 0x23253a, pants: 0x14151f },   // 最後の客の見た目（暗いスーツ・白髪）
+  askLines: ['100階お願いします', '……あれ、100階のボタン、無いですね', 'どれか押してもらえれば、たぶん着きます'],   // 乗ってからの台詞（順に）
+  pressLine: 'お願いします',
+  maxNum: 60,                          // 表示が 11F, 12F, … と上がる最大の階数（その次が謎の階）
+  mul: 0.84, minSec: 0.06,             // 1 階ごとの間隔 = move.stepSec × mul^k（minSec まで縮む＝加速）
+  dimTo: 0.6,                          // 画面の暗さ（黒の不透明度の最大。上昇の終わりごろ）
+  shakeMul: 4,                         // 振動の最大倍率（move 中の shake.amp に対して）
+  rumbleHz: 150,                       // 上昇音の最終の高さ
+  says: [{ k: 4, text: '……あれ、まだ着かないんですか？' }, { k: 18, text: 'なんだか、速くないですか…？' }],   // 上昇中に出す台詞（k = 何階分上がったか）
+  arriveLabel: '？F',                  // 謎の階の表示
+  arriveLine: '……ここ、どこですか？',
+  exitLine: 'ありがとうございました……？',
+  standSec: 1.6, voidSec: 1.4, bannerSec: 2.6,   // 扉が開いてから降りるまで／降りたあと何もない間／「本日の勤務終了」を出している秒
+  banner: '本日の勤務終了', resultHead: '本日の評価'
 };
 // ===== 階リストと移動の純粋ロジック（three.js 非依存） =====
 const FLOOR_NUMS = [-2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];       // インデックス 0..11 = B2 B1 1F … 10F（0階は無い）
@@ -82,13 +106,17 @@ function keyToIndex(k) {                                            // 数字キ
 }
 function gridIndices() { return FLOOR_NUMS.map((_, i) => FLOOR_NUMS.length - 1 - i); }   // ボタン表示順（3列×4段、上が高い階）
 // ===== ゲームの純粋ロジック（オーダー・スコア・ランク。three.js 非依存で verify からも使う） =====
-// 「オーダー」= 1 組の客の注文。kind: simple / change(到着後変更) / mid(移動中変更) / multi(複数乗客) / via(経由) / viaOpen(手前で一度開ける) / pass(通過時に止める) / forbid(行かない階)
+// 「オーダー」= 1 組の客の注文。kind: simple / change(到着後変更) / mid(移動中変更) / multi(複数乗客) / via(経由) / viaOpen(手前で一度開ける) / pass(通過時に止める) / forbid(行かない階) / basement(地下) / up(上に行きたい) / usual(いつもの) / swap(目的階の交換) / ghost(存在しない階)
 // 判定は「止まった階（扉を開けた階）」ごとに resolveStop(S, order, idx) が行い、降りる／変更／経由／減点／ボーナスを返す。
 function floorSpeech(i) { const n = FLOOR_NUMS[i]; return n < 0 ? '地下' + (-n) + '階' : n + '階'; }   // 台詞用（「3階」「地下1階」）
 
 // ---- 階の選択 ----
 function floorsIn(f) { const r = enabledRange(f), out = []; for (let i = r[0]; i <= r[1]; i++) out.push(i); return out; }
-function floorsForLv(lv, g) { g = g || CFG.game; const mx = g.enabledMaxByLv[lv] != null ? g.enabledMaxByLv[lv] : CFG.floors.enabledMax; return { enabledMin: CFG.floors.enabledMin, enabledMax: mx }; }
+function floorsForLv(lv, g) {
+  g = g || CFG.game;
+  const mx = g.enabledMaxByLv[lv] != null ? g.enabledMaxByLv[lv] : 10, mn = g.enabledMinByLv && g.enabledMinByLv[lv] != null ? g.enabledMinByLv[lv] : 1;
+  return { enabledMin: mn, enabledMax: mx };
+}
 function pickOne(arr, rng) { rng = rng || Math.random; return arr.length ? arr[Math.min(arr.length - 1, Math.floor(rng() * arr.length))] : -1; }
 function strictlyBetween(a, b, list) { const lo = Math.min(a, b), hi = Math.max(a, b); return list.filter(i => i > lo && i < hi); }
 
@@ -96,32 +124,42 @@ function strictlyBetween(a, b, list) { const lo = Math.min(a, b), hi = Math.max(
 function pickDest(cur, rng, f) { return pickOne(floorsIn(f).filter(i => i !== cur), rng); }
 
 // ---- 進行表（組ごとのレベルと種類） ----
-function parseDebug(hash) {                                         // "#lv=4&n=2&kind=pass" → { lv, n, kind } / 指定なしは null
-  const m = /lv=(\d)/.exec(String(hash || '')); if (!m) return null;
-  const lv = Number(m[1]); if (lv < 1 || lv > 5) return null;
+function parseDebug(hash) {                                         // "#lv=4&n=2&kind=pass" → { lv, n, kind, end } / "#ending" → エンディングだけ / 指定なしは null
+  hash = String(hash || '');
+  if (/ending/.test(hash)) return { lv: 6, n: 0, kind: null, end: true, ending: true };
+  const m = /lv=(\d)/.exec(hash); if (!m) return null;
+  const lv = Number(m[1]); if (lv < 1 || lv > 6) return null;
   const n = /[#&]n=(\d+)/.exec(hash), k = /kind=(\w+)/.exec(hash);
-  return { lv: lv, n: n ? Math.max(1, Math.min(30, Number(n[1]))) : CFG.game.debugGroups, kind: k ? k[1] : null };
+  return { lv: lv, n: n ? Math.max(1, Math.min(30, Number(n[1]))) : CFG.game.debugGroups, kind: k ? k[1] : null, end: /[#&]end(&|$)/.test(hash), ending: false };   // end = デバッグ進行のあともエンディングを入れる
 }
 function buildPlan(rng, g, dbg) {                                   // [{ lv, kind, n(乗客数) }]
   rng = rng || Math.random; g = g || CFG.game;
-  const lvs = dbg ? new Array(dbg.n).fill(dbg.lv) : g.levelPlan, ks = g.lv5Kinds;
-  let k5 = Math.floor(rng() * ks.length);
+  const lvs = dbg ? new Array(dbg.n).fill(dbg.lv) : g.levelPlan, ks = g.lv5Kinds, k6s = g.lv6Kinds;
+  let k5 = Math.floor(rng() * ks.length), k6 = 0;
   return lvs.map(lv => {
     if (lv === 1) return { lv: lv, kind: 'simple', n: 1 };
     if (lv === 2) return { lv: lv, kind: 'change', n: 1 };
     if (lv === 3) return { lv: lv, kind: 'multi', n: pickOne(g.multiCounts, rng) };
     if (lv === 4) return { lv: lv, kind: 'mid', n: 1 };
+    if (lv === 6) { const kind = dbg && dbg.kind && k6s.indexOf(dbg.kind) >= 0 ? dbg.kind : k6s[k6++ % k6s.length]; return { lv: lv, kind: kind, n: kind === 'swap' ? 2 : 1 }; }
     const kind = dbg && dbg.kind && ks.indexOf(dbg.kind) >= 0 ? dbg.kind : ks[k5++ % ks.length];
     return { lv: lv, kind: kind, n: 1 };
   });
 }
+function endingLabels(startIdx, maxNum) {                           // エンディングの上昇で順に出す階表示：現在階 → 10F までは実在の階 → 11F, 12F, … maxNum（最後に謎の階は別に出す）
+  const out = [floorLabel(startIdx)];
+  for (let i = startIdx + 1; i < FLOOR_NUMS.length; i++) out.push(floorLabel(i));
+  for (let n = FLOOR_NUMS[FLOOR_NUMS.length - 1] + 1; n <= maxNum; n++) out.push(n + 'F');
+  return out;
+}
+function endingStepSec(k, E) { E = E || CFG.ending; return Math.max(E.minSec, CFG.move.stepSec * Math.pow(E.mul, k)); }   // k 階目までの間隔（だんだん短くなる）
 function planMax(plan, g) { g = g || CFG.game; return plan.reduce((s, e) => s + e.n * g.correct + (g.bonus[e.kind] || 0), 0); }
 
 // ---- オーダーの生成（cur = 乗った階のインデックス） ----
-function genOrder(entry, cur, rng, f) {
+function genOrder(entry, cur, rng, f, regulars) {   // regulars = [{ style, floor }]（直近に降りた客。usual 用・新しいほど後ろ）
   rng = rng || Math.random;
   const R = floorsIn(f), others = R.filter(i => i !== cur), kind = entry.kind;
-  const base = k => ({ kind: k, lv: entry.lv || 1, riders: [], seq: [], seqDone: 0, forbid: -1, changeTo: -1, changed: false, midTo: -1, midState: '', violated: false });
+  const base = k => ({ kind: k, lv: entry.lv || 1, riders: [], seq: [], seqDone: 0, forbid: -1, changeTo: -1, changed: false, midTo: -1, midState: '', violated: false, rule: '', from: cur, top: -1, ghost: 0, atTop: false, swapped: false, usualKnown: false });
   const rider = (name, d) => ({ name: name, dest: d, off: false });
   const simple = () => { const o = base('simple'); o.riders.push(rider('', pickOne(others, rng))); o.fallback = kind !== 'simple'; return o; };
   if (!others.length) return null;
@@ -158,6 +196,30 @@ function genOrder(entry, cur, rng, f) {
       if (!c.length) return simple();
       o = base('forbid'); o.riders.push(rider('', d)); o.forbid = pickOne(bt.length ? bt : c, rng); return o;
     }
+    case 'basement': {                                              // 地下 B2/B1 への注文（ボタンは一番下にある）
+      const bs = others.filter(i => FLOOR_NUMS[i] < 0); if (!bs.length) return simple();
+      o = base('basement'); o.riders.push(rider('', pickOne(bs, rng))); return o;
+    }
+    case 'up': {                                                    // 「上に行きたいです」（最上階にいるときだけ「下」）：その向きならどの階で降りてもよい
+      const top = R[R.length - 1], down = cur >= top && cur > R[0];
+      o = base('up'); o.rule = down ? 'below' : 'above'; o.riders.push(rider('', -1)); return o;
+    }
+    case 'usual': {                                                 // 「いつものところで」：直近に降りた客と同じ見た目の客が、その客が降りた階を言う。覚えがなければ初見（どこでも可）
+      const cand = (regulars || []).filter(x => x.floor !== cur && R.indexOf(x.floor) >= 0).slice(-CFG.game.regularPool);
+      o = base('usual');
+      if (cand.length) { const c = pickOne(cand, rng), r = rider('', c.floor); r.style = c.style; o.riders.push(r); o.usualKnown = true; }
+      else { o.rule = 'any'; o.riders.push(rider('', -1)); }
+      return o;
+    }
+    case 'swap': {                                                  // 2 人が「交換しよう」と目的階を入れ替える（入れ替えは swapRiders）
+      if (others.length < 2) return simple();
+      const pool = others.slice(), a = pool.splice(Math.min(pool.length - 1, Math.floor(rng() * pool.length)), 1)[0], b = pickOne(pool, rng);
+      o = base('swap'); o.riders.push(rider('A', a)); o.riders.push(rider('B', b)); return o;
+    }
+    case 'ghost': {                                                 // 存在しない階：現存する最上階で扉を開ければ「無茶な注文を処理」
+      const top = R[R.length - 1];
+      o = base('ghost'); o.rule = 'ghost'; o.top = top; o.atTop = cur === top; o.ghost = pickOne(CFG.game.ghostFloors, rng); o.riders.push(rider('', -1)); return o;
+    }
     default: return simple();
   }
 }
@@ -171,6 +233,11 @@ function orderLines(o) {                                            // 乗った
     case 'viaOpen': return [{ who: '', text: d + '、でも' + floorSpeech(o.seq[0]) + 'で一度ドアを開けて' }];
     case 'pass': return [{ who: '', text: d + 'お願いします。' + floorSpeech(o.seq[0]) + 'を通過するときに止めて' }];
     case 'forbid': return [{ who: '', text: d + 'お願いします。' + floorSpeech(o.forbid) + 'には行かないで' }];
+    case 'swap': return o.riders.map(r => ({ who: r.name, text: floorSpeech(r.dest) + 'お願いします' }));
+    case 'basement': return [{ who: '', text: d + 'お願いします' }];
+    case 'ghost': return [{ who: '', text: o.ghost + '階お願いします' }, { who: '', text: o.atTop ? '……ボタンに無いですね。もう一番上ですよね？ ここで扉を開けてください' : '……ボタンに無いですね。とりあえず一番上までお願いします' }];
+    case 'up': return [{ who: '', text: (o.rule === 'below' ? '下' : '上') + 'に行きたいです' }, { who: '', text: '……何階かって？ ' + (o.rule === 'below' ? '下' : '上') + 'です。' + (o.rule === 'below' ? '下' : '上') + '。' }];
+    case 'usual': return [{ who: '', text: 'いつものところで' }, { who: '', text: '前にも乗りましたよね？ あそこです' }];
     default: return [{ who: '', text: d + 'お願いします' }];
   }
 }
@@ -179,6 +246,10 @@ function midLine(o) { return 'すみません！' + floorSpeech(o.midTo) + 'に�
 function viaDoneLine(o) { const d = floorSpeech(o.riders[0].dest); return o.kind === 'pass' ? 'あ、ここです。そのまま' + d + 'へ' : 'はい、次は' + d + 'お願いします'; }
 function orderReminder(o) {                                         // 間違えたときに添える現在の注文
   const r = o.riders.find(x => !x.off); if (!r) return '';
+  if (o.rule === 'ghost') return o.ghost + '階ですよ。ボタンに無いなら、一番上まで行ってみてください';
+  if (o.rule === 'above' || o.rule === 'below') return (o.rule === 'above' ? '上' : '下') + 'です、' + (o.rule === 'above' ? '上' : '下') + '！';
+  if (o.rule === 'any') return 'いつものところ、です';
+  if (o.kind === 'usual') return 'いつもの、前に降りた階です';
   const d = floorSpeech(r.dest);
   if (o.seqDone < o.seq.length) return o.kind === 'pass' ? floorSpeech(o.seq[0]) + 'で止めてから' + d + 'です' : '先に' + floorSpeech(o.seq[0]) + 'で止まってから' + d + 'です';
   if (o.kind === 'forbid') return d + 'です（' + floorSpeech(o.forbid) + 'は行かないで）';
@@ -186,6 +257,21 @@ function orderReminder(o) {                                         // 間違え
 }
 function moveInputAllowed(o) { return !!o && (o.kind === 'pass' || (o.kind === 'mid' && o.midState === 'shouted')); }   // 移動中でもボタンを受け付けるオーダー
 function midShout(o) { if (o.kind !== 'mid' || o.midState !== 'pending') return null; o.midState = 'shouted'; o.riders[0].dest = o.midTo; return midLine(o); }   // 移動中の変更（目的階を差し替えて台詞を返す）
+function isMulti(o) { return !!o && (o.kind === 'multi' || o.kind === 'swap'); }   // 複数乗客（HUD メモを出す）
+function offLine(o, r) {                                            // 降りるときの台詞
+  const w = r && r.name ? r.name + '：' : '';
+  if (o.rule === 'ghost') return w + '……やっぱり' + o.ghost + '階は無いですよね。ここで降ります';
+  if (o.rule === 'above' || o.rule === 'below') return w + 'ここでいいです。ありがとうございます';
+  if (o.rule === 'any') return w + '……あ、初めてでした。ここでいいです';
+  return w + 'ありがとうございます';
+}
+function swapRiders(o) {                                            // swap：A と B の目的階を入れ替える。台詞 [{ who, text }] を返す（もう済み・不成立なら null）
+  if (!o || o.kind !== 'swap' || o.swapped) return null;
+  const a = o.riders[0], b = o.riders[1]; if (!a || !b || a.off || b.off) return null;
+  o.swapped = true; const t = a.dest; a.dest = b.dest; b.dest = t;
+  return [{ who: 'A', text: 'え、そっちもその辺？ 目的地、交換しよう' }, { who: 'B', text: 'いいよ。Aは' + floorSpeech(a.dest) + '、僕は' + floorSpeech(b.dest) + 'ね' }];
+}
+function sameStopJudges(o, idx) { return !!o && o.rule === 'ghost' && idx === o.top && orderLeft(o) > 0; }   // 最上階にいるまま「開く」を押しても判定する（ghost で最上階から乗った場合）
 function orderLeft(o) { return o.riders.filter(r => !r.off).length; }
 
 // ---- スコア ----
@@ -207,13 +293,8 @@ function resolveStop(S, o, idx, g) {
   const res = { off: -1, changed: false, via: false, wrong: false, wrongKind: '', done: false, deltas: [] };
   const hit = o.riders.findIndex(r => !r.off && r.dest === idx), pending = o.seqDone < o.seq.length;
   const wrong = kind => { res.wrong = true; res.wrongKind = kind; const d = scoreWrong(S, g); if (d) res.deltas.push({ v: d, label: '' }); };
-  if (pending && idx === o.seq[o.seqDone]) { o.seqDone++; res.via = true; scoreProgress(S); return res; }
-  if (hit >= 0) {
-    if (pending) { wrong('early'); return res; }                    // 経由する前に最終階へ着いた
-    if (o.changeTo >= 0 && !o.changed) {                            // 到着後の変更：降りない。減点もしない
-      o.changed = true; o.riders[hit].dest = o.changeTo; res.changed = true; scoreProgress(S); return res;
-    }
-    o.riders[hit].off = true; res.off = hit; res.deltas.push({ v: scoreOff(S, g), label: '' });
+  const getOff = k => {                                             // k 番目の乗客が降りる（全員降りたら組終了＋ボーナス）
+    o.riders[k].off = true; res.off = k; res.deltas.push({ v: scoreOff(S, g), label: '' });
     if (!orderLeft(o)) {
       res.done = true;
       const b = g.bonus[o.kind] || 0;
@@ -221,6 +302,20 @@ function resolveStop(S, o, idx, g) {
       scoreGroupDone(S);
     }
     return res;
+  };
+  if (o.rule) {                                                     // 階が決まっていない注文（上／初見の常連／存在しない階）
+    const k = o.riders.findIndex(r => !r.off);
+    const ok = k >= 0 && (o.rule === 'any' ? idx !== o.from : o.rule === 'above' ? idx > o.from : o.rule === 'below' ? idx < o.from : o.rule === 'ghost' ? idx === o.top : false);
+    if (!ok) { wrong('wrong'); return res; }
+    return getOff(k);
+  }
+  if (pending && idx === o.seq[o.seqDone]) { o.seqDone++; res.via = true; scoreProgress(S); return res; }
+  if (hit >= 0) {
+    if (pending) { wrong('early'); return res; }                    // 経由する前に最終階へ着いた
+    if (o.changeTo >= 0 && !o.changed) {                            // 到着後の変更：降りない。減点もしない
+      o.changed = true; o.riders[hit].dest = o.changeTo; res.changed = true; scoreProgress(S); return res;
+    }
+    return getOff(hit);
   }
   if (idx === o.forbid) { o.violated = true; wrong('forbid'); return res; }
   wrong('wrong');
@@ -233,6 +328,12 @@ function rankFor(score, max, g) {
   const ratio = Math.max(0, Math.min(1, score / Math.max(1, max)));
   for (let k = 0; k < g.ranks.length; k++) if (ratio >= g.ranks[k].min) return g.ranks[k];
   return g.ranks[g.ranks.length - 1];
+}
+
+// ---- 常連の記録（usual 用）：見た目（style）ごとに「最後に降りた階」を新しいほど後ろに並べる ----
+function noteRegular(list, style, floor) {
+  for (let k = list.length - 1; k >= 0; k--) if (list[k].style === style) list.splice(k, 1);
+  list.push({ style: style, floor: floor });
 }
 // ===== 検証（three.js を使わない純粋ロジック） =====
 const $out = document.getElementById('out');
@@ -310,13 +411,13 @@ check('調整値：正解 +100・間違い -50・待たせる -10', G2.correct =
 })();
 
 // ---- Phase 3：進行表・生成・各オーダーの判定 ----
-check('進行表：組数 12・レベルは 1〜5 で非減少・Lv1 から始まり Lv5 で終わる', NG === 12 && PLAN[0] === 1 && PLAN[NG - 1] === 5 && PLAN.every((v, k) => v >= 1 && v <= 5 && (k === 0 || v >= PLAN[k - 1])));
-check('進行表：Lv1〜5 がすべて登場', [1, 2, 3, 4, 5].every(l => PLAN.indexOf(l) >= 0));
+check('進行表：組数 17・レベルは 1〜6 で非減少・Lv1 から始まり Lv6 で終わる', NG === 17 && PLAN[0] === 1 && PLAN[NG - 1] === 6 && PLAN.every((v, k) => v >= 1 && v <= 6 && (k === 0 || v >= PLAN[k - 1])));
+check('進行表：Lv1〜6 がすべて登場', [1, 2, 3, 4, 5, 6].every(l => PLAN.indexOf(l) >= 0));
 check('進行表：序盤 3 組は Lv1（従来どおり単純）', PLAN.slice(0, 3).every(v => v === 1));
-check('使える階：Lv1 は 5F まで、Lv5 は 10F まで、レベルが上がって縮まない', floorsForLv(1).enabledMax === 5 && floorsForLv(5).enabledMax === 10 && [1, 2, 3, 4, 5].every(l => l === 1 || floorsForLv(l).enabledMax >= floorsForLv(l - 1).enabledMax));
-check('使える階：全レベルが階リストの範囲内（B 階は Phase 4 まで使わない）', [1, 2, 3, 4, 5].every(l => { const f = floorsForLv(l); return f.enabledMin === 1 && floorIndexOf(f.enabledMax) >= 0 && f.enabledMax <= 10; }));
-check('ボーナス表：全オーダー種別に定義があり 0 以上', ['simple', 'change', 'mid', 'multi', 'via', 'viaOpen', 'pass', 'forbid'].every(k => typeof G2.bonus[k] === 'number' && G2.bonus[k] >= 0));
-check('ボーナス表：特殊注文（via/viaOpen/pass/forbid/mid/change）は 1 以上、単純と複数は 0', ['change', 'mid', 'via', 'viaOpen', 'pass', 'forbid'].every(k => G2.bonus[k] > 0) && G2.bonus.simple === 0 && G2.bonus.multi === 0);
+check('使える階：Lv1 は 5F まで、Lv5・Lv6 は 10F まで、レベルが上がって上限は縮まない・下限は広がるだけ', floorsForLv(1).enabledMax === 5 && floorsForLv(5).enabledMax === 10 && floorsForLv(6).enabledMax === 10 && [1, 2, 3, 4, 5, 6].every(l => l === 1 || (floorsForLv(l).enabledMax >= floorsForLv(l - 1).enabledMax && floorsForLv(l).enabledMin <= floorsForLv(l - 1).enabledMin)));
+check('使える階：全レベルが階リストの範囲内。Lv1〜5 は地下を使わず、Lv6 だけ B2 まで解放', [1, 2, 3, 4, 5, 6].every(l => { const f = floorsForLv(l); return floorIndexOf(f.enabledMin) >= 0 && floorIndexOf(f.enabledMax) >= 0 && f.enabledMax <= 10 && (l === 6 ? f.enabledMin === -2 : f.enabledMin === 1); }));
+check('ボーナス表：全オーダー種別に定義があり 0 以上', ['simple', 'change', 'mid', 'multi', 'via', 'viaOpen', 'pass', 'forbid', 'basement', 'up', 'usual', 'swap', 'ghost'].every(k => typeof G2.bonus[k] === 'number' && G2.bonus[k] >= 0));
+check('ボーナス表：特殊注文（via/viaOpen/pass/forbid/mid/change）は 1 以上、単純と複数は 0', ['change', 'mid', 'via', 'viaOpen', 'pass', 'forbid', 'basement', 'up', 'usual', 'swap', 'ghost'].every(k => G2.bonus[k] > 0) && G2.bonus.simple === 0 && G2.bonus.multi === 0);
 check('スロット：1〜3 人分の立ち位置があり、重ならない', [1, 2, 3].every(n => G2.slots[n].length === n && new Set(G2.slots[n].map(s => s.join(','))).size === n));
 check('デバッグハッシュ："#lv=4" → Lv4・既定の組数', (() => { const d = parseDebug('#lv=4'); return d.lv === 4 && d.n === G2.debugGroups && d.kind === null; })());
 check('デバッグハッシュ："#lv=5&n=2&kind=pass"', (() => { const d = parseDebug('#lv=5&n=2&kind=pass'); return d.lv === 5 && d.n === 2 && d.kind === 'pass'; })());
@@ -325,8 +426,8 @@ check('デバッグハッシュ：なし・範囲外は null', parseDebug('') ==
 (function () {
   const plan = buildPlan(() => 0.5);
   check('進行表の展開：組数・レベルが一致', plan.length === NG && plan.every((e, k) => e.lv === PLAN[k]));
-  check('進行表の展開：Lv1=simple / Lv2=change / Lv3=multi / Lv4=mid / Lv5 は特殊 4 種', plan.every(e => ({ 1: e.kind === 'simple', 2: e.kind === 'change', 3: e.kind === 'multi', 4: e.kind === 'mid', 5: G2.lv5Kinds.indexOf(e.kind) >= 0 })[e.lv]));
-  check('進行表の展開：Lv3 の乗客数は 2〜3 人、他は 1 人', plan.every(e => e.lv === 3 ? e.n >= 2 && e.n <= 3 : e.n === 1));
+  check('進行表の展開：Lv1=simple / Lv2=change / Lv3=multi / Lv4=mid / Lv5 は特殊 4 種', plan.every(e => ({ 1: e.kind === 'simple', 2: e.kind === 'change', 3: e.kind === 'multi', 4: e.kind === 'mid', 5: G2.lv5Kinds.indexOf(e.kind) >= 0, 6: G2.lv6Kinds.indexOf(e.kind) >= 0 })[e.lv]));
+  check('進行表の展開：Lv3 の乗客数は 2〜3 人、他は 1 人', plan.every(e => e.lv === 3 ? e.n >= 2 && e.n <= 3 : e.kind === 'swap' ? e.n === 2 : e.n === 1));
   check('進行表の展開：Lv5 の 3 組は別々の種類', new Set(plan.filter(e => e.lv === 5).map(e => e.kind)).size === 3);
   check('進行表の展開：Lv5 の種類は乱数開始位置が違えば全 4 種が出うる', (() => { const s = new Set(); for (let k = 0; k < 4; k++) buildPlan(() => k / 4 + 0.01).filter(e => e.lv === 5).forEach(e => s.add(e.kind)); return s.size === 4; })());
   check('デバッグ進行表：Lv4 を 3 組、すべて mid', (() => { const p = buildPlan(Math.random, G2, { lv: 4, n: 3, kind: null }); return p.length === 3 && p.every(e => e.kind === 'mid' && e.lv === 4); })());
@@ -461,27 +562,165 @@ const sum = r => r.deltas.reduce((s, d) => s + d.v, 0);
   check('間違い時の注文の言い直し：単独は「6階です」／経由前は「先に4階で…」', orderReminder(mk('simple', [{ f: 6 }])) === '6階です' && orderReminder(mk('via', [{ f: 8 }], { seq: [fl(4)] })).indexOf('先に4階') === 0);
 })();
 
-// 完走シミュレーション：進行表どおりに最適に止まれば満点 = planMax（ランク S）
+// ---- Phase 4：バカゲー注文（basement / up / usual / swap / ghost）とエンディングの純粋部分 ----
+check('Lv6 の種類は 5 種（basement/up/usual/swap/ghost）', eq(G2.lv6Kinds, ['basement', 'up', 'usual', 'swap', 'ghost']));
+check('デバッグハッシュ："#lv=6&n=5&kind=ghost" / "#lv=6&end" / "#ending"', (() => { const a = parseDebug('#lv=6&n=5&kind=ghost'), b = parseDebug('#lv=6&end'), c = parseDebug('#ending'); return a.lv === 6 && a.n === 5 && a.kind === 'ghost' && !a.end && b.end === true && c.ending === true && c.n === 0 && c.end === true; })());
+check('デバッグハッシュ：#lv=7 は null、通常の #lv=4 は end なし', parseDebug('#lv=7') === null && parseDebug('#lv=4').end === false);
+check('デバッグ進行表：Lv6 を 5 組 → 5 種が 1 回ずつ・swap は 2 人', (() => { const p = buildPlan(Math.random, G2, { lv: 6, n: 5, kind: null }); return eq(p.map(e => e.kind), G2.lv6Kinds) && p.every(e => e.n === (e.kind === 'swap' ? 2 : 1)); })());
+check('デバッグ進行表：Lv6 kind=ghost 指定', buildPlan(Math.random, G2, { lv: 6, n: 3, kind: 'ghost' }).every(e => e.kind === 'ghost'));
+check('デバッグ進行表：#ending は 0 組', buildPlan(Math.random, G2, parseDebug('#ending')).length === 0);
+check('満点：Lv6 の 5 組 = 乗客 6 人 + 各ボーナス', (() => { const p = buildPlan(Math.random, G2, { lv: 6, n: 5, kind: null }); return planMax(p) === 600 + G2.bonus.basement + G2.bonus.up + G2.bonus.usual + G2.bonus.swap + G2.bonus.ghost; })());
+check('調整値：存在しない階の候補はどれも実在しない（11 以上）', G2.ghostFloors.length > 0 && G2.ghostFloors.every(n => floorIndexOf(n) === -1 && n > 10));
+
+const R6 = floorsForLv(6);
+function eachGen6(kind, fn, regs) {
+  for (let c = 0; c < 12; c++) for (let q = 0; q < RNGS.length; q++) { const o = genOrder({ kind: kind, lv: 6, n: 2 }, c, RNGS[q], R6, regs); if (!o || !fn(o, c)) return false; }
+  return true;
+}
+check('生成 basement：目的階は地下（B1/B2）で現在階以外・fallback しない', eachGen6('basement', (o, c) => o.kind === 'basement' && FLOOR_NUMS[o.riders[0].dest] < 0 && o.riders[0].dest !== c && !o.fallback));
+check('生成 basement：B2・B1 の両方が出うる', (() => { const s = new Set(); for (let q = 0; q < RNGS.length; q++) s.add(genOrder({ kind: 'basement', lv: 6 }, fl(5), RNGS[q], R6).riders[0].dest); return s.has(fl(-2)) && s.has(fl(-1)); })());
+check('生成 up：普通は「上」(above)。最上階にいるときだけ「下」(below)。目的階は決めない', eachGen6('up', (o, c) => o.kind === 'up' && o.riders[0].dest === -1 && o.from === c && (c === floorIndexOf(10) ? o.rule === 'below' : o.rule === 'above')));
+check('生成 ghost：存在しない階を言い、最上階が正解階（top）', eachGen6('ghost', (o, c) => o.rule === 'ghost' && o.top === floorIndexOf(10) && floorIndexOf(o.ghost) === -1 && G2.ghostFloors.indexOf(o.ghost) >= 0 && o.atTop === (c === o.top)));
+check('生成 swap：A と B の 2 人・互いに異なる階・現在階以外', eachGen6('swap', (o, c) => o.riders.length === 2 && o.riders[0].dest !== o.riders[1].dest && o.riders.every(r => r.dest !== c && isEnabled(r.dest, R6)) && o.riders[0].name === 'A' && o.riders[1].name === 'B' && !o.swapped));
+check('生成 usual：常連の記録があればその階（現在階以外）と見た目を使う', (() => { const o = genOrder({ kind: 'usual', lv: 6 }, fl(3), () => 0.5, R6, [{ style: 2, floor: fl(7) }]); return o.usualKnown && o.rule === '' && o.riders[0].dest === fl(7) && o.riders[0].style === 2; })());
+check('生成 usual：記録が現在階だけ・空なら初見（どこでも可・rule any）', (() => { const a = genOrder({ kind: 'usual', lv: 6 }, fl(3), () => 0.5, R6, [{ style: 2, floor: fl(3) }]), b = genOrder({ kind: 'usual', lv: 6 }, fl(3), () => 0.5, R6, []); return a.rule === 'any' && !a.usualKnown && b.rule === 'any' && b.riders[0].dest === -1; })());
+check('生成 usual：直近 regularPool 人だけが候補（古い記録は使わない）', (() => { const regs = [{ style: 0, floor: fl(2) }, { style: 1, floor: fl(4) }, { style: 2, floor: fl(5) }, { style: 3, floor: fl(6) }]; const s = new Set(); for (let q = 0; q < 40; q++) s.add(genOrder({ kind: 'usual', lv: 6 }, fl(9), RNGS[q], R6, regs).riders[0].style); return !s.has(0) && s.size === 3; })());
+check('生成 Lv6：全種別が使用可能階（B2〜10F）の外へ出さない・全現在階で null にならない', ['basement', 'up', 'usual', 'swap', 'ghost'].every(k => eachGen6(k, o => o.riders.every(r => r.dest === -1 || isEnabled(r.dest, R6)))));
+check('常連の記録：同じ見た目は上書き・新しいほど後ろ', (() => { const l = []; noteRegular(l, 1, 4); noteRegular(l, 2, 5); noteRegular(l, 1, 8); return eq(l, [{ style: 2, floor: 5 }, { style: 1, floor: 8 }]); })());
+
+(function () {   // ghost の判定
+  const top = fl(10), mkG = from => genOrder({ kind: 'ghost', lv: 6 }, from, () => 0.1, R6);
+  let S = newScore(2), o = mkG(fl(2)), r = resolveStop(S, o, fl(5));
+  check('ghost：最上階以外に止まると間違い -50・降りない', r.wrong && sum(r) === -50 && r.off < 0 && !r.done);
+  r = resolveStop(S, o, fl(-1));
+  check('ghost：地下に止まっても間違い（同じ組では減点なし）', r.wrong && sum(r) === 0);
+  r = resolveStop(S, o, top);
+  check('ghost：最上階で扉が開けば降りる +100（先に間違えたのでボーナスなし）・組終了', r.off === 0 && r.done && sum(r) === 100 && S.served === 1 && S.score === 50);
+  S = newScore(1); o = mkG(fl(2)); r = resolveStop(S, o, top);
+  check('ghost：ノーミスで最上階 → +100 とボーナス', sum(r) === 100 + G2.bonus.ghost && r.deltas[1].label === 'BONUS' && r.done);
+  S = newScore(1); o = mkG(top);
+  check('ghost：最上階から乗った場合は、その階で「開く」を押せば判定できる（sameStopJudges）', o.atTop && sameStopJudges(o, top) && !sameStopJudges(o, fl(5)));
+  r = resolveStop(S, o, top);
+  check('ghost：最上階から乗った場合も、そこで判定して降りる・ボーナス', r.off === 0 && sum(r) === 100 + G2.bonus.ghost);
+  check('ghost：降りたあとは sameStopJudges が false', !sameStopJudges(o, top) && !sameStopJudges(null, top) && !sameStopJudges(mk('simple', [{ f: 3 }]), fl(3)));
+  const L = orderLines(mkG(fl(2))).map(l => l.text), L2 = orderLines(mkG(top)).map(l => l.text);
+  check('台詞 ghost：「N階お願いします」＋最上階へ促す／最上階にいるときは「ここで扉を」', /階お願いします/.test(L[0]) && L[1].indexOf('一番上まで') >= 0 && L2[1].indexOf('ここで扉') >= 0);
+  const o3 = mkG(fl(2)); o3.ghost = 13;
+  check('台詞 ghost：降りるとき「やっぱり13階は無いですよね」・間違いのときは最上階のヒント', offLine(o3, o3.riders[0]).indexOf('13階は無い') >= 0 && orderReminder(o3).indexOf('一番上') >= 0);
+})();
+(function () {   // up（上に行きたい）
+  const mkU = from => genOrder({ kind: 'up', lv: 6 }, from, () => 0.5, R6);
+  let S = newScore(1), o = mkU(fl(3)), r = resolveStop(S, o, fl(1));
+  check('up：下の階に止まると間違い -50（上に行きたい）', r.wrong && sum(r) === -50 && r.off < 0);
+  r = resolveStop(S, o, fl(-2));
+  check('up：地下も間違い（同じ組では減点なし）', r.wrong && sum(r) === 0);
+  r = resolveStop(S, o, fl(4));
+  check('up：すぐ上の階（現在階より上ならどこでも）で降りる +100（間違えたのでボーナスなし）', r.off === 0 && r.done && sum(r) === 100 && S.served === 1);
+  S = newScore(1); o = mkU(fl(3)); r = resolveStop(S, o, fl(10));
+  check('up：最上階でも降りる・ノーミスならボーナス', sum(r) === 100 + G2.bonus.up);
+  S = newScore(1); o = mkU(fl(3)); r = resolveStop(S, o, fl(3));
+  check('up：自分が乗った階に止まるのは「上」ではない（間違い）', r.wrong && r.off < 0);
+  S = newScore(1); o = mkU(fl(10)); r = resolveStop(S, o, fl(8));
+  check('up：最上階から乗ると「下」。下ならどこでも降りる +100 とボーナス', o.rule === 'below' && sum(r) === 100 + G2.bonus.up);
+  S = newScore(1); o = mkU(fl(10)); r = resolveStop(S, o, fl(10));
+  check('up(下)：同じ階は間違い', r.wrong && r.off < 0);
+  check('台詞 up：「上に行きたいです」→「何階かって？ 上です。上。」／下も', eq(orderLines(mkU(fl(3))).map(l => l.text), ['上に行きたいです', '……何階かって？ 上です。上。']) && orderLines(mkU(fl(10)))[0].text === '下に行きたいです');
+  check('間違い時の言い直し：上です、上！', orderReminder(mkU(fl(3))) === '上です、上！');
+})();
+(function () {   // basement
+  const mkB = (from, q) => genOrder({ kind: 'basement', lv: 6 }, from, () => q, R6);
+  const o = mkB(fl(3), 0), d = o.riders[0].dest;
+  let S = newScore(1), r = resolveStop(S, o, fl(2));
+  check('basement：地下以外は間違い -50', r.wrong && sum(r) === -50);
+  r = resolveStop(S, o, d);
+  check('basement：地下の目的階で降りる +100（間違えたのでボーナスなし）', r.off === 0 && r.done && sum(r) === 100);
+  S = newScore(1); const o2 = mkB(fl(3), 0.99); r = resolveStop(S, o2, o2.riders[0].dest);
+  check('basement：ノーミスならボーナス', sum(r) === 100 + G2.bonus.basement);
+  check('台詞 basement：「地下2階お願いします」', orderLines(mk('basement', [{ f: -2 }]))[0].text === '地下2階お願いします');
+  check('経路：1F から B2 は B1→B2（0 階を飛ばさない）', eq(pathBetween(fl(1), fl(-2)).map(floorLabel), ['B1', 'B2']));
+})();
+(function () {   // usual（いつもの）
+  const S = newScore(1), o = genOrder({ kind: 'usual', lv: 6 }, fl(3), () => 0.5, R6, [{ style: 4, floor: fl(7) }]);
+  let r = resolveStop(S, o, fl(5));
+  check('usual（覚えがある客）：前に降りた階以外は間違い -50', r.wrong && sum(r) === -50 && r.off < 0);
+  r = resolveStop(S, o, fl(7));
+  check('usual（覚えがある客）：前に降りた階で +100（間違えたのでボーナスなし）', r.off === 0 && r.done && sum(r) === 100);
+  const S2 = newScore(1), o2 = genOrder({ kind: 'usual', lv: 6 }, fl(3), () => 0.5, R6, [{ style: 4, floor: fl(7) }]);
+  check('usual（覚えがある客）：ノーミスならボーナス', sum(resolveStop(S2, o2, fl(7))) === 100 + G2.bonus.usual);
+  const S3 = newScore(1), o3 = genOrder({ kind: 'usual', lv: 6 }, fl(3), () => 0.5, R6, []);
+  r = resolveStop(S3, o3, fl(-1));
+  check('usual（初見）：どの階で止まっても降りる（地下でも）。ノーミスならボーナス', r.off === 0 && r.done && sum(r) === 100 + G2.bonus.usual);
+  check('usual（初見）：「……あ、初めてでした」と言って降りる', offLine(o3, o3.riders[0]).indexOf('初めてでした') >= 0);
+  check('台詞 usual：「いつものところで」＋「前にも乗りましたよね？ あそこです」', eq(orderLines(o).map(l => l.text), ['いつものところで', '前にも乗りましたよね？ あそこです']));
+  check('usual：降りた階を記録→次の usual で同じ階を言う（記録の往復）', (() => { const regs = []; noteRegular(regs, 3, fl(6)); const o4 = genOrder({ kind: 'usual', lv: 6 }, fl(2), () => 0.1, R6, regs); return o4.riders[0].dest === fl(6) && o4.riders[0].style === 3; })());
+})();
+(function () {   // swap（目的階の交換）
+  const mkS = () => mk('swap', [{ name: 'A', f: 3 }, { name: 'B', f: 8 }]);
+  const o = mkS(), lines = swapRiders(o);
+  check('swap：A と B の目的階が入れ替わる（A=8F、B=3F）・台詞は 2 つ', o.riders[0].dest === fl(8) && o.riders[1].dest === fl(3) && o.swapped && lines.length === 2 && lines[0].who === 'A' && lines[1].who === 'B');
+  check('swap：台詞に入れ替え後の階が出る（「Aは8階、僕は3階ね」）', lines[1].text.indexOf('Aは8階、僕は3階') >= 0);
+  check('swap：交換は 1 度だけ', swapRiders(o) === null && o.riders[0].dest === fl(8));
+  const S = newScore(1);
+  let r = resolveStop(S, o, fl(8));
+  check('swap：交換後は 8F で A が降りる（B ではない）', r.off === 0 && !r.done && sum(r) === 100);
+  r = resolveStop(S, o, fl(3));
+  check('swap：3F で B が降り、組が終わる・ノーミスで +100×2 とボーナス', r.off === 1 && r.done && S.score === 200 + G2.bonus.swap && S.served === 1);
+  const S2 = newScore(1), o2 = mkS();
+  check('swap：交換後に 3F へ止まると降りるのは B（階の集合は変わらず、降りる人だけ入れ替わる）', (() => { swapRiders(o2); return resolveStop(S2, o2, fl(3)).off === 1; })());
+  const o3 = mkS(); o3.riders[0].off = true;
+  check('swap：片方が降りたあとは交換しない', swapRiders(o3) === null);
+  check('swap：他の種別・null では何も起きない', swapRiders(mk('multi', [{ name: 'A', f: 3 }, { name: 'B', f: 5 }])) === null && swapRiders(null) === null);
+  check('台詞 swap：A・B が順にそれぞれの階を言う', eq(orderLines(mkS()), [{ who: 'A', text: '3階お願いします' }, { who: 'B', text: '8階お願いします' }]));
+  check('isMulti：multi と swap だけメモを出す', isMulti(mk('multi', [{ f: 2 }])) && isMulti(mk('swap', [{ f: 2 }, { f: 3 }])) && !isMulti(mk('simple', [{ f: 2 }])) && !isMulti(null));
+  check('既存の種別は新しい rule 欄が無くても従来どおり判定（rule 未設定）', (() => { const S4 = newScore(1), o4 = mk('simple', [{ f: 3 }]); return resolveStop(S4, o4, fl(3)).off === 0 && S4.score === 100; })());
+})();
+
+// エンディングの純粋部分
 (function () {
-  function ideal(o) {                                             // 最適な止まり順（階インデックス）
+  const E = CFG.ending;
+  const L = endingLabels(fl(1), E.maxNum);
+  check('エンディング：1F から 2F…10F → 11F, 12F, 13F … と続く', L[0] === '1F' && L[9] === '10F' && L[10] === '11F' && L[11] === '12F' && L[12] === '13F' && L[L.length - 1] === E.maxNum + 'F');
+  check('エンディング：B2 発でも B1→1F→…→10F→11F と実在の階を飛ばさず進む', (() => { const l = endingLabels(fl(-2), 30); return eq(l.slice(0, 4), ['B2', 'B1', '1F', '2F']) && l[11] === '10F' && l[12] === '11F' && l.indexOf('0F') < 0; })());
+  check('エンディング：10F 発なら次はすぐ 11F', eq(endingLabels(fl(10), 13), ['10F', '11F', '12F', '13F']));
+  check('エンディング：表示は重複なし・謎の階（？F）は含まない', new Set(L).size === L.length && L.indexOf(E.arriveLabel) < 0);
+  check('エンディング：間隔は単調に短くなり minSec で止まる（加速）', (() => { let prev = Infinity; for (let k = 0; k < 80; k++) { const s = endingStepSec(k); if (s > prev + 1e-9 || s < E.minSec - 1e-9) return false; prev = s; } return endingStepSec(0) === CFG.move.stepSec && endingStepSec(200) === E.minSec; })());
+  check('エンディング：上昇は長すぎない（合計 5〜15 秒）', (() => { let t = 0; for (let k = 1; k < L.length; k++) t += endingStepSec(k - 1); return t >= 5 && t <= 15; })());
+  check('エンディング：調整値（暗さ 0〜1・振動倍率 > 1・台詞の k が範囲内・最初の台詞は「100階お願いします」）', E.dimTo > 0 && E.dimTo <= 1 && E.shakeMul > 1 && E.says.every(s => s.k > 0 && s.k < L.length) && E.askLines[0] === '100階お願いします' && E.maxNum > 13);
+  check('エンディング：謎の階・勤務終了・評価の文言が CFG にある', E.arriveLabel === '？F' && E.banner === '本日の勤務終了' && E.resultHead === '本日の評価');
+})();
+
+// 完走シミュレーション：進行表どおりに最適に止まれば満点 = planMax（ランク S）。Lv6 のバカゲー注文も含む
+const PERSON_STYLES_N = 5;
+(function () {
+  function ideal(o, cur) {                                        // 最適な止まり順（階インデックス）
     switch (o.kind) {
       case 'change': return [o.riders[0].dest, o.changeTo];
       case 'mid': midShout(o); return [o.riders[0].dest];
       case 'multi': return o.riders.map(r => r.dest);
+      case 'swap': swapRiders(o); return o.riders.map(r => r.dest);
       case 'via': case 'viaOpen': case 'pass': return [o.seq[0], o.riders[0].dest];
+      case 'ghost': return [o.top];
+      case 'up': return [o.rule === 'above' ? cur + 1 : cur - 1];
+      case 'usual': return [o.rule === 'any' ? (cur > 0 ? cur - 1 : cur + 1) : o.riders[0].dest];
       default: return [o.riders[0].dest];
     }
   }
-  let all = true, bad = '';
-  for (let rep = 0; rep < 20; rep++) {
-    const plan = buildPlan(() => (rep * 0.137) % 0.9999), S = newScore(plan.length); let cur = fl(1);
-    plan.forEach(e => {
-      const o = genOrder(e, cur, () => (rep * 0.211 + e.lv * 0.17) % 0.9999, floorsForLv(e.lv));
-      ideal(o).forEach(i => { resolveStop(S, o, i); cur = i; });
+  let all = true, bad = '', usualKnownSeen = 0, usualAnySeen = 0, ghostTopSeen = 0;
+  for (let rep = 0; rep < 40; rep++) {
+    const plan = buildPlan(() => (rep * 0.137) % 0.9999), S = newScore(plan.length), regs = []; let cur = fl(1);
+    plan.forEach((e, gi) => {
+      const o = genOrder(e, cur, () => (rep * 0.211 + e.lv * 0.17 + gi * 0.053) % 0.9999, floorsForLv(e.lv), regs);
+      if (o.kind === 'usual') { if (o.usualKnown) usualKnownSeen++; else usualAnySeen++; }
+      if (o.kind === 'ghost' && o.atTop) ghostTopSeen++;
+      ideal(o, cur).forEach(i => {
+        const r = resolveStop(S, o, i); cur = i;
+        if (r.off >= 0) noteRegular(regs, (gi * 3 + r.off) % PERSON_STYLES_N, i);
+      });
     });
     if (S.score !== planMax(plan) || !isFinished(S) || rankFor(S.score, planMax(plan)).rank !== 'S') { all = false; bad = 'rep ' + rep + ': ' + S.score + '/' + planMax(plan) + ' served ' + S.served; break; }
   }
-  check('完走シミュレーション ×20：最適に止まれば全組終了・満点（planMax）・ランク S', all, bad);
+  check('完走シミュレーション ×40（Lv6 含む 17 組）：最適に止まれば全組終了・満点（planMax）・ランク S', all, bad);
+  check('完走シミュレーション：usual（常連あり）が実際に生成された', usualKnownSeen > 0, 'known ' + usualKnownSeen + ' any ' + usualAnySeen + ' ghostTop ' + ghostTopSeen);
   check('完走シミュレーション：全組で 1 回ずつ間違えるだけなら C ★1', (() => { const S = newScore(NG); for (let k = 0; k < NG; k++) { scoreWrong(S); scoreGroupDone(S); } return rankFor(S.score, planMax(buildPlan(() => 0.5))).stars === 1; })());
 })();
 

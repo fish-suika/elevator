@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>検証 — エレベーター係</title>
+<style>
+  body{font-family:"Yu Gothic UI",system-ui,sans-serif;background:#1c1c1e;color:#eee;padding:24px;line-height:1.7}
+  h1{font-size:18px;margin-bottom:16px}
+  .r{padding:4px 0;border-bottom:1px solid #333}
+  .ok::before{content:"PASS ";color:#6bd07a;font-weight:bold}
+  .ng::before{content:"FAIL ";color:#ff6b6b;font-weight:bold}
+  .ng{color:#ffb0b0}
+  .why{color:#ff8f8f;padding-left:3em;font-size:13px}
+  #sum{margin-top:18px;font-size:16px;font-weight:bold}
+</style>
+</head>
+<body>
+<h1>エレベーター係 — 検証</h1>
+<div id="out"></div>
+<div id="sum"></div>
+<script>
+"use strict";
+// ===== 調整値（ここに集約） =====
+const CFG = {
+  floors: { enabledMin: 1, enabledMax: 5, startFloor: 1 },        // 使える階の範囲（階番号。B2=-2, B1=-1, 1F=1 …）。Phase 3 以降で広げる
+  move: { stepSec: 0.85, doorSec: 1.1, startDelay: 0.3, arriveWait: 0.6, chimeFlash: 0.35 },   // 1階あたりの秒数／扉の開閉秒／閉じてから動くまで／到着してから開くまで
+  shake: { amp: 0.014, freq: 41 },                                 // 移動中の画面振動
+  car: { w: 2.8, h: 2.9, zBack: -1.5, zFront: 2.6, doorW: 1.4, doorH: 2.2 },
+  cam: { x: 0.3, y: 1.45, z: 2.2, lookX: 0, lookY: 1.3, lookZ: -1.5, hfov: 62 },   // 固定カメラ（hfov は横方向の画角。縦横比が変わっても横幅は同じ）
+  person: { x: -0.35, z: -0.1, scale: 1 },
+  audio: { master: 0.22 }
+};
+// ===== 階リストと移動の純粋ロジック（three.js 非依存） =====
+const FLOOR_NUMS = [-2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];       // インデックス 0..11 = B2 B1 1F … 10F（0階は無い）
+function floorLabel(i) { const n = FLOOR_NUMS[i]; return n < 0 ? 'B' + (-n) : n + 'F'; }
+function floorIndexOf(n) { return FLOOR_NUMS.indexOf(n); }          // 階番号 → インデックス（無ければ -1）
+function floorIndexFromLabel(s) {                                   // "3F" / "B1" → インデックス
+  const m = /^(B)?(\d+)F?$/i.exec(String(s).trim());
+  if (!m) return -1;
+  return floorIndexOf(m[1] ? -Number(m[2]) : Number(m[2]));
+}
+function enabledRange(f) { f = f || CFG.floors; return [floorIndexOf(f.enabledMin), floorIndexOf(f.enabledMax)]; }
+function isEnabled(i, f) { const r = enabledRange(f); return Number.isInteger(i) && i >= 0 && i < FLOOR_NUMS.length && i >= r[0] && i <= r[1]; }
+function moveDir(from, to) { return to > from ? 1 : to < from ? -1 : 0; }
+function pathBetween(from, to) {                                    // from の次の階から to までの階インデックス列（同じ階なら空）
+  const d = moveDir(from, to), out = [];
+  if (d === 0) return out;
+  for (let i = from + d; d > 0 ? i <= to : i >= to; i += d) out.push(i);
+  return out;
+}
+function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F
+  if (!/^[0-9]$/.test(k)) return -1;
+  return floorIndexOf(k === '0' ? 10 : Number(k));
+}
+function gridIndices() { return FLOOR_NUMS.map((_, i) => FLOOR_NUMS.length - 1 - i); }   // ボタン表示順（3列×4段、上が高い階）
+// ===== 検証（three.js を使わない純粋ロジック） =====
+const $out = document.getElementById('out');
+let nOk = 0, nNg = 0;
+function check(name, cond, why) {
+  const d = document.createElement('div'); d.className = 'r ' + (cond ? 'ok' : 'ng'); d.textContent = name;
+  if (!cond) { nNg++; const w = document.createElement('div'); w.className = 'why'; w.textContent = why || ''; d.appendChild(w); } else nOk++;
+  $out.appendChild(d);
+}
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// 階リスト
+check('階は 12 個（B2〜10F）', FLOOR_NUMS.length === 12);
+check('ラベル順 B2,B1,1F,2F,…,10F', eq(FLOOR_NUMS.map((_, i) => floorLabel(i)), ['B2', 'B1', '1F', '2F', '3F', '4F', '5F', '6F', '7F', '8F', '9F', '10F']), JSON.stringify(FLOOR_NUMS.map((_, i) => floorLabel(i))));
+check('0階は存在しない', floorIndexOf(0) === -1);
+check('階番号→インデックス：B2=0, B1=1, 1F=2, 10F=11', floorIndexOf(-2) === 0 && floorIndexOf(-1) === 1 && floorIndexOf(1) === 2 && floorIndexOf(10) === 11);
+check('存在しない階（11, 100, -3）は -1', floorIndexOf(11) === -1 && floorIndexOf(100) === -1 && floorIndexOf(-3) === -1);
+check('ラベル→インデックス往復', FLOOR_NUMS.every((_, i) => floorIndexFromLabel(floorLabel(i)) === i));
+check('ラベル解釈："3" "B1" "10F" "x"', floorIndexFromLabel('3') === 4 && floorIndexFromLabel('B1') === 1 && floorIndexFromLabel('10F') === 11 && floorIndexFromLabel('x') === -1);
+
+// 有効範囲
+check('既定の有効範囲は 1F〜5F（インデックス 2〜6）', eq(enabledRange(), [2, 6]), JSON.stringify(enabledRange()));
+check('1F〜5F は有効', [1, 2, 3, 4, 5].every(n => isEnabled(floorIndexOf(n))));
+check('B2・B1・6F・10F は無効', [-2, -1, 6, 10].every(n => !isEnabled(floorIndexOf(n))));
+check('範囲外インデックス（-1, 12, NaN, 小数）は無効', !isEnabled(-1) && !isEnabled(12) && !isEnabled(NaN) && !isEnabled(2.5));
+check('範囲を広げると反映（B2〜10F で全部有効）', FLOOR_NUMS.every((_, i) => isEnabled(i, { enabledMin: -2, enabledMax: 10 })));
+check('開始階 1F は有効', isEnabled(floorIndexOf(CFG.floors.startFloor)));
+
+// 移動経路
+check('1F→4F の経路 2F,3F,4F', eq(pathBetween(floorIndexOf(1), floorIndexOf(4)).map(floorLabel), ['2F', '3F', '4F']));
+check('4F→1F の経路 3F,2F,1F', eq(pathBetween(floorIndexOf(4), floorIndexOf(1)).map(floorLabel), ['3F', '2F', '1F']));
+check('同じ階は空の経路', pathBetween(5, 5).length === 0);
+check('隣の階は 1 手', eq(pathBetween(floorIndexOf(2), floorIndexOf(3)), [floorIndexOf(3)]));
+check('1F→B1 は 0階を飛ばさず B1 の 1 手', eq(pathBetween(floorIndexOf(1), floorIndexOf(-1)).map(floorLabel), ['B1']));
+check('2F→B2 の経路 1F,B1,B2', eq(pathBetween(floorIndexOf(2), floorIndexOf(-2)).map(floorLabel), ['1F', 'B1', 'B2']));
+check('経路の長さ = 階差の絶対値（全組）', (() => { for (let a = 0; a < 12; a++) for (let b = 0; b < 12; b++) if (pathBetween(a, b).length !== Math.abs(a - b)) return false; return true; })());
+check('経路の最後は目的階', (() => { for (let a = 0; a < 12; a++) for (let b = 0; b < 12; b++) if (a !== b && pathBetween(a, b).slice(-1)[0] !== b) return false; return true; })());
+check('向き：上=1 下=-1 同=0', moveDir(2, 5) === 1 && moveDir(5, 2) === -1 && moveDir(3, 3) === 0);
+
+// キー
+check('数字キー 1〜9 は 1F〜9F', ['1', '2', '3', '4', '5', '6', '7', '8', '9'].every((k, n) => keyToIndex(k) === floorIndexOf(n + 1)));
+check('0 キーは 10F', keyToIndex('0') === floorIndexOf(10));
+check('数字以外のキーは -1', keyToIndex('a') === -1 && keyToIndex('Enter') === -1 && keyToIndex('12') === -1);
+
+// ボタン配置
+check('ボタン順は 10F 始まり B2 終わり（上が高い階）', (() => { const g = gridIndices().map(floorLabel); return g[0] === '10F' && g[11] === 'B2' && g.length === 12; })());
+check('ボタン順に重複なし', new Set(gridIndices()).size === 12);
+
+document.getElementById('sum').textContent = nNg === 0 ? `ALL PASS (${nOk})` : `FAIL ${nNg} / PASS ${nOk}`;
+document.getElementById('sum').style.color = nNg === 0 ? '#6bd07a' : '#ff6b6b';
+</script>
+</body>
+</html>

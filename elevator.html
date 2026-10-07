@@ -8,7 +8,7 @@
   /* --u は「枠の幅の 1/100」（JS が入れる）。スマホでも PC の 9:16 枠でも同じ比の見た目になる */
   :root{--u:3.75px;--ink:#f2efe8;--amber:#ffb23e;--bg:#0c0e12;--jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Meiryo","Noto Sans JP",sans-serif}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{width:100%;height:100%;overflow:hidden;background:#020305;color:var(--ink);font-family:var(--jp);
+  html,body{-webkit-touch-callout:none;width:100%;height:100%;overflow:hidden;background:#020305;color:var(--ink);font-family:var(--jp);
     touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
   button{font-family:var(--jp);touch-action:manipulation;cursor:pointer}
 
@@ -49,7 +49,7 @@
 
   /* ---- Phase 2：スコア・台詞・リザルト ---- */
   .stat{position:absolute;top:calc(env(safe-area-inset-top) + var(--u)*3);z-index:5;pointer-events:none;line-height:1.15;text-shadow:0 2px 8px #000}
-  .stat small{display:block;font-size:calc(var(--u)*2.6);letter-spacing:.1em;opacity:.8}
+  .stat small{display:block;font-size:calc(var(--u)*3);letter-spacing:.1em;opacity:.8}
   .stat b{font-size:calc(var(--u)*6);color:var(--amber);font-variant-numeric:tabular-nums}
   #statL{left:calc(var(--u)*3)} #statR{right:calc(var(--u)*3);text-align:right}
   #memo{position:absolute;left:calc(var(--u)*3);top:calc(env(safe-area-inset-top) + var(--u)*15);z-index:5;pointer-events:none;display:none;flex-direction:column;gap:calc(var(--u)*1);text-shadow:0 2px 8px #000}
@@ -57,12 +57,12 @@
   #memo .m{display:flex;align-items:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*0.8) calc(var(--u)*2.4);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*4.2);font-weight:700;font-variant-numeric:tabular-nums}
   #memo .m i{width:calc(var(--u)*3);height:calc(var(--u)*3);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
   #memo .m.done{opacity:.4;text-decoration:line-through}
-  #regMemo{position:absolute;right:calc(var(--u)*3);top:calc(env(safe-area-inset-top) + var(--u)*15);z-index:5;pointer-events:none;display:none;flex-direction:column;align-items:flex-end;gap:calc(var(--u)*0.8);text-shadow:0 2px 8px #000}
+  #regMemo{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*62);z-index:5;pointer-events:none;display:none;flex-direction:column;align-items:flex-end;gap:calc(var(--u)*0.8);text-shadow:0 2px 8px #000}
   #regMemo.on{display:flex}
-  #regMemo small{font-size:calc(var(--u)*2.6);letter-spacing:.1em;opacity:.8}
+  #regMemo small{font-size:calc(var(--u)*3);letter-spacing:.1em;opacity:.8}
   #regMemo .m{display:flex;align-items:center;gap:calc(var(--u)*1.4);padding:calc(var(--u)*0.5) calc(var(--u)*2);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*3.6);font-weight:700;font-variant-numeric:tabular-nums}
   #regMemo .m i{width:calc(var(--u)*2.6);height:calc(var(--u)*2.6);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
-  #speech{position:absolute;left:50%;top:calc(var(--u)*24);transform:translateX(-50%) scale(.9);z-index:5;max-width:80%;padding:calc(var(--u)*2.4) calc(var(--u)*4);
+  #speech{text-wrap:balance;position:absolute;left:50%;top:calc(var(--u)*21);transform:translateX(-50%) scale(.9);z-index:5;max-width:86%;padding:calc(var(--u)*2.4) calc(var(--u)*4);
     border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.6);font-weight:700;letter-spacing:.04em;text-align:center;
     opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
   #speech.on{opacity:1;transform:translateX(-50%) scale(1)}
@@ -74,7 +74,14 @@
   #result{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*3);background:rgba(6,8,12,.92);text-align:center}
   #result.on{display:flex}
   #result h2{font-size:calc(var(--u)*6);letter-spacing:.2em;font-weight:700}
-  #resStars{font-size:calc(var(--u)*11);color:var(--amber);letter-spacing:.1em}
+  #resStars{font-size:calc(var(--u)*11);color:var(--amber);letter-spacing:.1em;display:flex;gap:calc(var(--u)*1.5)}
+  #resStars span{display:block;opacity:.18;transform:scale(.4)}
+  #resStars span.lit{opacity:1;animation:starIn .45s cubic-bezier(.2,1.6,.4,1) both;animation-delay:var(--d,0s);text-shadow:0 0 18px rgba(255,170,50,.8)}
+  @keyframes starIn{0%{opacity:0;transform:scale(2.4) rotate(-40deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+  .rise{animation:rankIn .7s cubic-bezier(.2,1.5,.4,1) both;animation-delay:var(--d,0s)}
+  @keyframes rankIn{0%{opacity:0;transform:scale(2.2)}100%{opacity:1;transform:scale(1)}}
+  .fade{animation:fadeIn .8s ease-out both;animation-delay:var(--d,0s)}
+  @keyframes fadeIn{0%{opacity:0;transform:translateY(calc(var(--u)*2))}100%{opacity:1;transform:none}}
   #resRank{font-size:calc(var(--u)*26);font-weight:900;color:var(--amber);line-height:1;text-shadow:0 0 24px rgba(255,170,50,.6)}
   #resScoreRow{font-size:calc(var(--u)*5.5)} #resScore{font-size:calc(var(--u)*9);font-weight:700;color:var(--amber)}
   #resTitle{font-size:calc(var(--u)*5.6);padding:0 calc(var(--u)*6)}
@@ -155,7 +162,7 @@ const CFG = {
     bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0,
               basement: 20, up: 20, usual: 40, swap: 30, ghost: 50 },   // 無茶な注文をノーミスで処理したときのボーナス（種類別）
     waitSec: 10,                                                   // 台詞のあと何秒操作しないと「待たせた」になるか
-    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
+    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.7, exitSec: 1.0, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
     sayGap: 1.5,                                                   // 複数乗客が順に台詞を言う間隔（秒）
     midShoutSec: 0.2,                                              // Lv4：動き出してから「6階にしてください！」と叫ぶまでの秒
     debugGroups: 4,                                                // URL ハッシュ #lv=4 でレベルを固定したときの組数（#lv=4&n=2 で変更）
@@ -166,6 +173,8 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
+    resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
+    bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
       { min: 0.95, rank: 'S', stars: 5, title: '完璧なエレベーター係' },
       { min: 0.80, rank: 'A', stars: 4, title: '普通のエレベーター係' },
@@ -212,7 +221,9 @@ function pathBetween(from, to) {                                    // from の�
   for (let i = from + d; d > 0 ? i <= to : i >= to; i += d) out.push(i);
   return out;
 }
-function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F
+function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F、B = B1、N = B2（地下）
+  if (k === 'b' || k === 'B') return floorIndexOf(-1);
+  if (k === 'n' || k === 'N') return floorIndexOf(-2);
   if (!/^[0-9]$/.test(k)) return -1;
   return floorIndexOf(k === '0' ? 10 : Number(k));
 }
@@ -668,7 +679,7 @@ function walkPerson(p, t) {
   u.arms[0].rotation.x = -s * 0.5; u.arms[1].rotation.x = s * 0.5;
 }
 // ===== 入力（コールバック経由。操作の意味づけは 90-boot.js） =====
-const INPUT = { onFloor: null, onOpen: null, onClose: null, onFirst: null };
+const INPUT = { onFloor: null, onOpen: null, onClose: null, onFirst: null, onRetry: null };
 let inputFirst = false;
 function inputFirstGesture() { if (!inputFirst) { inputFirst = true; if (INPUT.onFirst) INPUT.onFirst(); } }   // 最初の操作で音を有効化
 
@@ -676,10 +687,11 @@ function bindInput() {
   addEventListener('keydown', e => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     inputFirstGesture();
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (INPUT.onRetry && INPUT.onRetry()) return; INPUT.onOpen(); return; }   // Enter / Space＝開く（リザルト中は「もう一度」）
     const i = keyToIndex(e.key);
     if (i >= 0) { INPUT.onFloor(i); return; }
     if (e.key === 'o' || e.key === 'O') INPUT.onOpen();
-    else if (e.key === 'c' || e.key === 'C') INPUT.onClose();
+    else if (e.key === 'c' || e.key === 'C' || e.key === 'Backspace') INPUT.onClose();
   });
   addEventListener('pointerdown', inputFirstGesture, { passive: true });
   // ダブルタップ拡大・ピンチ・スクロール・長押しメニューを止める
@@ -734,16 +746,6 @@ function hudPop(delta, label) {                                    // 加点・�
   p.style.animationDuration = CFG.game.popSec + 's';
   $('pops').appendChild(p); setTimeout(() => p.remove(), CFG.game.popSec * 1000 + 100);
 }
-function hudResult(info) {                                         // info = { score, rank, stars, title } か null（閉じる）
-  const r = $('result');
-  if (!info) { r.classList.remove('on'); return; }
-  $('resScore').textContent = info.score;
-  $('resHead').textContent = info.heading || '本日の勤務終了';
-  $('resStars').textContent = '★'.repeat(info.stars) + '☆'.repeat(5 - info.stars);
-  $('resRank').textContent = info.rank; $('resTitle').textContent = info.title;
-  r.classList.add('on');
-}
-
 // ---- Phase 4：エンディング ----
 function hudLabel(text) { $('curN').textContent = text; HUD.btns.forEach(b => b.classList.remove('here')); }   // 実在しない階の表示（ボタンの「今ここ」は消す）
 function hudDim(a) { $('dim').style.opacity = a; }
@@ -757,6 +759,26 @@ function hudRegMemo(items) {                                       // 常連メ�
     d.appendChild(document.createTextNode(it.name + ':' + it.text)); m.appendChild(d);
   });
   m.classList.add('on');
+}
+let resTimer = 0;
+function hudResult(info) {                                         // info = { score, rank, stars, title, heading } か null（閉じる）。星が順に出る→ランクがドンと出る→称号→もう一度
+  const r = $('result'), A = CFG.game.resultAnim;
+  clearInterval(resTimer);
+  if (!info) { r.classList.remove('on'); return; }
+  $('resHead').textContent = info.heading || '本日の勤務終了';
+  const st = $('resStars'); st.innerHTML = '';
+  for (let k = 0; k < 5; k++) {
+    const s = document.createElement('span'); s.textContent = k < info.stars ? '★' : '☆';
+    if (k < info.stars) { s.className = 'lit'; s.style.setProperty('--d', (A.firstSec + k * A.starSec) + 's'); } else { s.style.opacity = .35; s.style.transform = 'none'; }
+    st.appendChild(s);
+  }
+  const t0 = A.firstSec + info.stars * A.starSec;                  // 星が出そろう時刻
+  const rk = $('resRank'), tt = $('resTitle'), rt = $('retry'), sr = $('resScoreRow');
+  [[rk, 'rise', t0 + A.rankDelay], [tt, 'fade', t0 + A.rankDelay + A.titleDelay], [sr, 'fade', 0.2], [rt, 'fade', t0 + A.rankDelay + A.titleDelay + 0.3]].forEach(a => { a[0].classList.remove('rise', 'fade'); void a[0].offsetWidth; a[0].style.setProperty('--d', a[2] + 's'); a[0].classList.add(a[1]); });
+  rk.textContent = info.rank; tt.textContent = info.title;
+  const sc = $('resScore'), t1 = performance.now(); sc.textContent = 0;                       // スコアは 0 から数え上げる
+  resTimer = setInterval(() => { const p = Math.min(1, (performance.now() - t1) / (A.countSec * 1000)); sc.textContent = Math.round(info.score * p); if (p >= 1) clearInterval(resTimer); }, 40);
+  r.classList.add('on');
 }
 // ===== 起動とメインループ・エレベーターの動き =====
 // mode: idle（扉は開閉どちらでも・操作可）→ closing（扉を閉じる）→ moving（1階ずつ）→ arrived（チャイム）→ opening → 判定 → idle / exiting（降りる）
@@ -788,7 +810,7 @@ function hudRegMemo(items) {                                       // 常連メ�
   const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0,
               S: newScore(CFG.game.levelPlan.length), plan: [], max: 1, order: null, people: [], leaving: -1, res: null, reroute: -1, mt: 0,
               sayQ: [], sayT: 0, memoShown: [], pt: 0, waitT: 0, styleBase: 0,
-              regulars: [], endingOn: true, ep: '', et: 0, ek: 0, ec: 0, labels: [], dimV: 0, dimTarget: 0, shakeMul: 1 };   // regulars = 直近に降りた客の見た目と階（usual 用）、swapT = swap の交換までの経過秒、ep = エンディングの段階   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
+              regulars: [], endingOn: true, ep: '', et: 0, ek: 0, ec: 0, labels: [], dimV: 0, dimTarget: 0, shakeMul: 1, bump: 0 };   // regulars = 直近に降りた客の見た目と階（usual 用）、swapT = swap の交換までの経過秒、ep = エンディングの段階   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
   window.GAME = G;                                           // 確認用
   const busy = () => G.mode !== 'idle';
 
@@ -844,6 +866,8 @@ function hudRegMemo(items) {                                       // 常連メ�
     G.regulars = []; hudRegMemo(null); G.endingOn = !dbg || !!dbg.end; G.ep = ''; G.et = 0; G.shakeMul = 1; G.dimV = G.dimTarget = 0; hudDim(0); hudBanner(null); sndRumbleStop();
     if (dbg && dbg.ending) { G.max = planMax(buildPlan(Math.random, CFG.game, null)); G.S.score = Math.round(G.max * 0.9); }   // #ending：通常の満点の 9 割を取った状態でエンディングだけ見る
     clearPeople(); hudSpeech(null); hudMemo(null); setDoorTarget(1);
+    G.sayQ = []; G.leaving = -1; G.res = null; G.order = null; G.c = 0; G.bump = 0; G.waitT = 0; G.pt = 0; G.mt = 0; G.flash = 0; hudFlash(0); hudBanner(null);
+    HUD.btns.forEach((b, k) => hudLit(k, false)); $('pops').innerHTML = ''; $('msg').classList.remove('on'); hudRegMemo(null);
     G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; G.reroute = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
     if (G.plan.length) spawnGroup(); else startEnding();
   }
@@ -852,7 +876,7 @@ function hudRegMemo(items) {                                       // 常連メ�
   // ---- エンディング：最後の客が乗る → 何かボタンを押す → 暗くなりながら存在しない階へ上昇 → 謎の階 → 何もない → 勤務終了 → リザルト ----
   function startEnding() {
     const E = CFG.ending;
-    setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); hudSpeech(null); G.sayQ = []; setDoorTarget(1);
+    hudRegMemo(null); setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); hudSpeech(null); G.sayQ = []; setDoorTarget(1);
     const p = makePerson(E.style); p.userData.slot = CFG.game.slots[1][0]; p.userData.color = '#' + E.style.shirt.toString(16).padStart(6, '0');
     p.position.set(CFG.game.doorX, 0, CFG.game.doorZ); p.scale.setScalar(CFG.person.scale); scene.add(p); G.people = [p];
   }
@@ -931,7 +955,7 @@ function hudRegMemo(items) {                                       // 常連メ�
     } else if (res.via) {
       sndNote(); sayNow(viaDoneLine(o)); G.mode = 'idle'; G.waitT = 0;
     } else {                                                 // 間違い（降りない階・禁止階・経由前）
-      const first = res.deltas.length > 0; sndMiss();
+      const first = res.deltas.length > 0; sndMiss(); G.bump = CFG.game.bump.wrong;
       if (res.wrongKind === 'forbid') sayNow('えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに');
       else if (isMulti(o)) sayNow(first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…');
       else sayNow((first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o));
@@ -960,10 +984,11 @@ function hudRegMemo(items) {                                       // 常連メ�
   INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); stopHere(); };
   INPUT.onClose = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
   INPUT.onFirst = () => { sndInit(); sndResume(); };
+  INPUT.onRetry = () => { if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };
 
   function showFloor() { hudSetFloor(G.idx); carSetDisplay(floorLabel(G.idx), G.mode === 'moving' ? G.dir : 0); carSetHall(G.idx); }
   function arrive() {
-    G.mode = 'arrived'; G.t = 0; hudArrow(0); sndRumbleStop(); sndChime(); G.flash = 1; showFloor();
+    G.mode = 'arrived'; G.t = 0; hudArrow(0); sndRumbleStop(); sndChime(); G.flash = 1; G.bump = CFG.game.bump.arrive; showFloor();
     HUD.btns.forEach((b, k) => hudLit(k, false));
   }
   function applyReroute() {                                  // 移動中に押された階へ、いま着いた階から行き先を差し替える
@@ -1052,11 +1077,14 @@ function hudRegMemo(items) {                                       // 常連メ�
 
     // 固定カメラ（移動中だけ軽く振動）
     const C = CFG.cam, sh = G.mode === 'moving' ? CFG.shake.amp : G.mode === 'ending' && G.ep === 'rise' ? CFG.shake.amp * G.shakeMul : 0, k = G.time * CFG.shake.freq;
-    camera.position.set(C.x + Math.sin(k * 1.3) * sh, C.y + Math.sin(k) * sh, C.z);
+    G.bump = G.bump < 0.0004 ? 0 : G.bump * Math.exp(-dt / (CFG.game.bump.sec / 4));
+    const bp = G.bump * Math.sin(G.time * 55);
+    camera.position.set(C.x + Math.sin(k * 1.3) * sh + bp * 0.5, C.y + Math.sin(k) * sh + bp, C.z);
     camera.lookAt(C.lookX, C.lookY, C.lookZ);
     G.people.forEach(p => { if (p && !walking.has(p)) updatePerson(p, G.time); });
   }
 
+  document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) SND.ctx.suspend(); else SND.ctx.resume(); });   // タブを離れたら音を止める（戻ったとき dt は 0.05 秒で頭打ちなので状態は飛ばない）
   hudBuild(); bindInput(); fit();
   $('retry').addEventListener('pointerdown', e => { e.preventDefault(); inputFirstGesture(); sndResume(); sndClick(); startGame(); });
   addEventListener('hashchange', () => { G.debugHash = null; startGame(); });   // #lv=4 などの切り替えを即反映（デバッグ用）
@@ -1064,7 +1092,7 @@ function hudRegMemo(items) {                                       // 常連メ�
   startGame();
   let last = performance.now();
   (function loop(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 時計が戻っても（dt が負でも）状態を壊さない
     update(dt); renderer.render(scene, camera);
     requestAnimationFrame(loop);
   })(last);

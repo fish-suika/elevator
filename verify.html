@@ -44,7 +44,7 @@ const CFG = {
     bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0,
               basement: 20, up: 20, usual: 40, swap: 30, ghost: 50 },   // 無茶な注文をノーミスで処理したときのボーナス（種類別）
     waitSec: 10,                                                   // 台詞のあと何秒操作しないと「待たせた」になるか
-    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
+    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.7, exitSec: 1.0, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
     sayGap: 1.5,                                                   // 複数乗客が順に台詞を言う間隔（秒）
     midShoutSec: 0.2,                                              // Lv4：動き出してから「6階にしてください！」と叫ぶまでの秒
     debugGroups: 4,                                                // URL ハッシュ #lv=4 でレベルを固定したときの組数（#lv=4&n=2 で変更）
@@ -55,6 +55,8 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
+    resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
+    bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
       { min: 0.95, rank: 'S', stars: 5, title: '完璧なエレベーター係' },
       { min: 0.80, rank: 'A', stars: 4, title: '普通のエレベーター係' },
@@ -101,7 +103,9 @@ function pathBetween(from, to) {                                    // from の�
   for (let i = from + d; d > 0 ? i <= to : i >= to; i += d) out.push(i);
   return out;
 }
-function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F
+function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F、B = B1、N = B2（地下）
+  if (k === 'b' || k === 'B') return floorIndexOf(-1);
+  if (k === 'n' || k === 'N') return floorIndexOf(-2);
   if (!/^[0-9]$/.test(k)) return -1;
   return floorIndexOf(k === '0' ? 10 : Number(k));
 }
@@ -385,6 +389,10 @@ check('向き：上=1 下=-1 同=0', moveDir(2, 5) === 1 && moveDir(5, 2) === -1
 check('数字キー 1〜9 は 1F〜9F', ['1', '2', '3', '4', '5', '6', '7', '8', '9'].every((k, n) => keyToIndex(k) === floorIndexOf(n + 1)));
 check('0 キーは 10F', keyToIndex('0') === floorIndexOf(10));
 check('数字以外のキーは -1', keyToIndex('a') === -1 && keyToIndex('Enter') === -1 && keyToIndex('12') === -1);
+check('B キーは B1、N キーは B2（大文字小文字どちらも）・地下も押せる', keyToIndex('b') === floorIndexOf(-1) && keyToIndex('B') === floorIndexOf(-1) && keyToIndex('n') === floorIndexOf(-2) && keyToIndex('N') === floorIndexOf(-2));
+check('全 12 階に対応するキーがある（1〜9・0・B・N）', (() => { const s = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'b', 'n'].map(keyToIndex)); return s.size === 12 && !s.has(-1); })());
+check('Phase 5 の調整値：リザルト演出・カメラの揺れ・乗り降りの秒数が妥当', (() => { const A = CFG.game.resultAnim, B = CFG.game.bump; return A.starSec > 0 && A.starSec < 1 && A.countSec > 0 && A.countSec < 3 && B.arrive > 0 && B.wrong >= B.arrive && B.wrong < 0.2 && B.sec > 0 && CFG.game.thanksSec > 0 && CFG.game.exitSec > 0 && CFG.game.thanksSec + CFG.game.exitSec < 3; })());
+check('リザルト演出の総時間は 5 秒以内（星 5 つ → ランク → 称号 → ボタン）', (() => { const A = CFG.game.resultAnim; return A.firstSec + 5 * A.starSec + A.rankDelay + A.titleDelay + 0.3 + 0.8 < 5; })());
 
 // ボタン配置
 check('ボタン順は 10F 始まり B2 終わり（上が高い階）', (() => { const g = gridIndices().map(floorLabel); return g[0] === '10F' && g[11] === 'B2' && g.length === 12; })());

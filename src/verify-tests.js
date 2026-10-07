@@ -40,6 +40,10 @@ check('向き：上=1 下=-1 同=0', moveDir(2, 5) === 1 && moveDir(5, 2) === -1
 check('数字キー 1〜9 は 1F〜9F', ['1', '2', '3', '4', '5', '6', '7', '8', '9'].every((k, n) => keyToIndex(k) === floorIndexOf(n + 1)));
 check('0 キーは 10F', keyToIndex('0') === floorIndexOf(10));
 check('数字以外のキーは -1', keyToIndex('a') === -1 && keyToIndex('Enter') === -1 && keyToIndex('12') === -1);
+check('B キーは B1、N キーは B2（大文字小文字どちらも）・地下も押せる', keyToIndex('b') === floorIndexOf(-1) && keyToIndex('B') === floorIndexOf(-1) && keyToIndex('n') === floorIndexOf(-2) && keyToIndex('N') === floorIndexOf(-2));
+check('全 12 階に対応するキーがある（1〜9・0・B・N）', (() => { const s = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'b', 'n'].map(keyToIndex)); return s.size === 12 && !s.has(-1); })());
+check('Phase 5 の調整値：リザルト演出・カメラの揺れ・乗り降りの秒数が妥当', (() => { const A = CFG.game.resultAnim, B = CFG.game.bump; return A.starSec > 0 && A.starSec < 1 && A.countSec > 0 && A.countSec < 3 && B.arrive > 0 && B.wrong >= B.arrive && B.wrong < 0.2 && B.sec > 0 && CFG.game.thanksSec > 0 && CFG.game.exitSec > 0 && CFG.game.thanksSec + CFG.game.exitSec < 3; })());
+check('リザルト演出の総時間は 5 秒以内（星 5 つ → ランク → 称号 → ボタン）', (() => { const A = CFG.game.resultAnim; return A.firstSec + 5 * A.starSec + A.rankDelay + A.titleDelay + 0.3 + 0.8 < 5; })());
 
 // ボタン配置
 check('ボタン順は 10F 始まり B2 終わり（上が高い階）', (() => { const g = gridIndices().map(floorLabel); return g[0] === '10F' && g[11] === 'B2' && g.length === 12; })());

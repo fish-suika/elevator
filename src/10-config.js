@@ -22,7 +22,7 @@ const CFG = {
     bonus: { change: 20, mid: 30, via: 30, viaOpen: 30, pass: 40, forbid: 30, multi: 0, simple: 0,
               basement: 20, up: 20, usual: 40, swap: 30, ghost: 50 },   // 無茶な注文をノーミスで処理したときのボーナス（種類別）
     waitSec: 10,                                                   // 台詞のあと何秒操作しないと「待たせた」になるか
-    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.9, exitSec: 1.2, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
+    boardSec: 1.1, boardStagger: 0.35, thanksSec: 0.7, exitSec: 1.0, doorZ: -2.1, doorX: 0,   // 乗る・乗客ごとの遅れ・「ありがとう」の間・降りる秒数／扉の向こう側の位置（出入りの起点）
     sayGap: 1.5,                                                   // 複数乗客が順に台詞を言う間隔（秒）
     midShoutSec: 0.2,                                              // Lv4：動き出してから「6階にしてください！」と叫ぶまでの秒
     debugGroups: 4,                                                // URL ハッシュ #lv=4 でレベルを固定したときの組数（#lv=4&n=2 で変更）
@@ -33,6 +33,8 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
+    resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
+    bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
       { min: 0.95, rank: 'S', stars: 5, title: '完璧なエレベーター係' },
       { min: 0.80, rank: 'A', stars: 4, title: '普通のエレベーター係' },

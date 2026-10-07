@@ -16,7 +16,9 @@ function pathBetween(from, to) {                                    // from の�
   for (let i = from + d; d > 0 ? i <= to : i >= to; i += d) out.push(i);
   return out;
 }
-function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F
+function keyToIndex(k) {                                            // 数字キー 1..9 = 1F..9F、0 = 10F、B = B1、N = B2（地下）
+  if (k === 'b' || k === 'B') return floorIndexOf(-1);
+  if (k === 'n' || k === 'N') return floorIndexOf(-2);
   if (!/^[0-9]$/.test(k)) return -1;
   return floorIndexOf(k === '0' ? 10 : Number(k));
 }

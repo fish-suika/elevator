@@ -44,16 +44,6 @@ function hudPop(delta, label) {                                    // 加点・�
   p.style.animationDuration = CFG.game.popSec + 's';
   $('pops').appendChild(p); setTimeout(() => p.remove(), CFG.game.popSec * 1000 + 100);
 }
-function hudResult(info) {                                         // info = { score, rank, stars, title } か null（閉じる）
-  const r = $('result');
-  if (!info) { r.classList.remove('on'); return; }
-  $('resScore').textContent = info.score;
-  $('resHead').textContent = info.heading || '本日の勤務終了';
-  $('resStars').textContent = '★'.repeat(info.stars) + '☆'.repeat(5 - info.stars);
-  $('resRank').textContent = info.rank; $('resTitle').textContent = info.title;
-  r.classList.add('on');
-}
-
 // ---- Phase 4：エンディング ----
 function hudLabel(text) { $('curN').textContent = text; HUD.btns.forEach(b => b.classList.remove('here')); }   // 実在しない階の表示（ボタンの「今ここ」は消す）
 function hudDim(a) { $('dim').style.opacity = a; }
@@ -67,4 +57,24 @@ function hudRegMemo(items) {                                       // 常連メ�
     d.appendChild(document.createTextNode(it.name + ':' + it.text)); m.appendChild(d);
   });
   m.classList.add('on');
+}
+let resTimer = 0;
+function hudResult(info) {                                         // info = { score, rank, stars, title, heading } か null（閉じる）。星が順に出る→ランクがドンと出る→称号→もう一度
+  const r = $('result'), A = CFG.game.resultAnim;
+  clearInterval(resTimer);
+  if (!info) { r.classList.remove('on'); return; }
+  $('resHead').textContent = info.heading || '本日の勤務終了';
+  const st = $('resStars'); st.innerHTML = '';
+  for (let k = 0; k < 5; k++) {
+    const s = document.createElement('span'); s.textContent = k < info.stars ? '★' : '☆';
+    if (k < info.stars) { s.className = 'lit'; s.style.setProperty('--d', (A.firstSec + k * A.starSec) + 's'); } else { s.style.opacity = .35; s.style.transform = 'none'; }
+    st.appendChild(s);
+  }
+  const t0 = A.firstSec + info.stars * A.starSec;                  // 星が出そろう時刻
+  const rk = $('resRank'), tt = $('resTitle'), rt = $('retry'), sr = $('resScoreRow');
+  [[rk, 'rise', t0 + A.rankDelay], [tt, 'fade', t0 + A.rankDelay + A.titleDelay], [sr, 'fade', 0.2], [rt, 'fade', t0 + A.rankDelay + A.titleDelay + 0.3]].forEach(a => { a[0].classList.remove('rise', 'fade'); void a[0].offsetWidth; a[0].style.setProperty('--d', a[2] + 's'); a[0].classList.add(a[1]); });
+  rk.textContent = info.rank; tt.textContent = info.title;
+  const sc = $('resScore'), t1 = performance.now(); sc.textContent = 0;                       // スコアは 0 から数え上げる
+  resTimer = setInterval(() => { const p = Math.min(1, (performance.now() - t1) / (A.countSec * 1000)); sc.textContent = Math.round(info.score * p); if (p >= 1) clearInterval(resTimer); }, 40);
+  r.classList.add('on');
 }

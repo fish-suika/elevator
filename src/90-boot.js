@@ -28,7 +28,7 @@
   const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0,
               S: newScore(CFG.game.levelPlan.length), plan: [], max: 1, order: null, people: [], leaving: -1, res: null, reroute: -1, mt: 0,
               sayQ: [], sayT: 0, memoShown: [], pt: 0, waitT: 0, styleBase: 0,
-              regulars: [], endingOn: true, ep: '', et: 0, ek: 0, ec: 0, labels: [], dimV: 0, dimTarget: 0, shakeMul: 1 };   // regulars = 直近に降りた客の見た目と階（usual 用）、swapT = swap の交換までの経過秒、ep = エンディングの段階   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
+              regulars: [], endingOn: true, ep: '', et: 0, ek: 0, ec: 0, labels: [], dimV: 0, dimTarget: 0, shakeMul: 1, bump: 0 };   // regulars = 直近に降りた客の見た目と階（usual 用）、swapT = swap の交換までの経過秒、ep = エンディングの段階   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
   window.GAME = G;                                           // 確認用
   const busy = () => G.mode !== 'idle';
 
@@ -84,6 +84,8 @@
     G.regulars = []; hudRegMemo(null); G.endingOn = !dbg || !!dbg.end; G.ep = ''; G.et = 0; G.shakeMul = 1; G.dimV = G.dimTarget = 0; hudDim(0); hudBanner(null); sndRumbleStop();
     if (dbg && dbg.ending) { G.max = planMax(buildPlan(Math.random, CFG.game, null)); G.S.score = Math.round(G.max * 0.9); }   // #ending：通常の満点の 9 割を取った状態でエンディングだけ見る
     clearPeople(); hudSpeech(null); hudMemo(null); setDoorTarget(1);
+    G.sayQ = []; G.leaving = -1; G.res = null; G.order = null; G.c = 0; G.bump = 0; G.waitT = 0; G.pt = 0; G.mt = 0; G.flash = 0; hudFlash(0); hudBanner(null);
+    HUD.btns.forEach((b, k) => hudLit(k, false)); $('pops').innerHTML = ''; $('msg').classList.remove('on'); hudRegMemo(null);
     G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; G.reroute = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
     if (G.plan.length) spawnGroup(); else startEnding();
   }
@@ -92,7 +94,7 @@
   // ---- エンディング：最後の客が乗る → 何かボタンを押す → 暗くなりながら存在しない階へ上昇 → 謎の階 → 何もない → 勤務終了 → リザルト ----
   function startEnding() {
     const E = CFG.ending;
-    setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); hudSpeech(null); G.sayQ = []; setDoorTarget(1);
+    hudRegMemo(null); setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); hudSpeech(null); G.sayQ = []; setDoorTarget(1);
     const p = makePerson(E.style); p.userData.slot = CFG.game.slots[1][0]; p.userData.color = '#' + E.style.shirt.toString(16).padStart(6, '0');
     p.position.set(CFG.game.doorX, 0, CFG.game.doorZ); p.scale.setScalar(CFG.person.scale); scene.add(p); G.people = [p];
   }
@@ -171,7 +173,7 @@
     } else if (res.via) {
       sndNote(); sayNow(viaDoneLine(o)); G.mode = 'idle'; G.waitT = 0;
     } else {                                                 // 間違い（降りない階・禁止階・経由前）
-      const first = res.deltas.length > 0; sndMiss();
+      const first = res.deltas.length > 0; sndMiss(); G.bump = CFG.game.bump.wrong;
       if (res.wrongKind === 'forbid') sayNow('えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに');
       else if (isMulti(o)) sayNow(first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…');
       else sayNow((first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o));
@@ -200,10 +202,11 @@
   INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); stopHere(); };
   INPUT.onClose = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
   INPUT.onFirst = () => { sndInit(); sndResume(); };
+  INPUT.onRetry = () => { if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };
 
   function showFloor() { hudSetFloor(G.idx); carSetDisplay(floorLabel(G.idx), G.mode === 'moving' ? G.dir : 0); carSetHall(G.idx); }
   function arrive() {
-    G.mode = 'arrived'; G.t = 0; hudArrow(0); sndRumbleStop(); sndChime(); G.flash = 1; showFloor();
+    G.mode = 'arrived'; G.t = 0; hudArrow(0); sndRumbleStop(); sndChime(); G.flash = 1; G.bump = CFG.game.bump.arrive; showFloor();
     HUD.btns.forEach((b, k) => hudLit(k, false));
   }
   function applyReroute() {                                  // 移動中に押された階へ、いま着いた階から行き先を差し替える
@@ -292,11 +295,14 @@
 
     // 固定カメラ（移動中だけ軽く振動）
     const C = CFG.cam, sh = G.mode === 'moving' ? CFG.shake.amp : G.mode === 'ending' && G.ep === 'rise' ? CFG.shake.amp * G.shakeMul : 0, k = G.time * CFG.shake.freq;
-    camera.position.set(C.x + Math.sin(k * 1.3) * sh, C.y + Math.sin(k) * sh, C.z);
+    G.bump = G.bump < 0.0004 ? 0 : G.bump * Math.exp(-dt / (CFG.game.bump.sec / 4));
+    const bp = G.bump * Math.sin(G.time * 55);
+    camera.position.set(C.x + Math.sin(k * 1.3) * sh + bp * 0.5, C.y + Math.sin(k) * sh + bp, C.z);
     camera.lookAt(C.lookX, C.lookY, C.lookZ);
     G.people.forEach(p => { if (p && !walking.has(p)) updatePerson(p, G.time); });
   }
 
+  document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) SND.ctx.suspend(); else SND.ctx.resume(); });   // タブを離れたら音を止める（戻ったとき dt は 0.05 秒で頭打ちなので状態は飛ばない）
   hudBuild(); bindInput(); fit();
   $('retry').addEventListener('pointerdown', e => { e.preventDefault(); inputFirstGesture(); sndResume(); sndClick(); startGame(); });
   addEventListener('hashchange', () => { G.debugHash = null; startGame(); });   // #lv=4 などの切り替えを即反映（デバッグ用）
@@ -304,7 +310,7 @@
   startGame();
   let last = performance.now();
   (function loop(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 時計が戻っても（dt が負でも）状態を壊さない
     update(dt); renderer.render(scene, camera);
     requestAnimationFrame(loop);
   })(last);

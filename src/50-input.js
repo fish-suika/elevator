@@ -1,5 +1,5 @@
 // ===== 入力（コールバック経由。操作の意味づけは 90-boot.js） =====
-const INPUT = { onFloor: null, onOpen: null, onClose: null, onFirst: null };
+const INPUT = { onFloor: null, onOpen: null, onClose: null, onFirst: null, onRetry: null };
 let inputFirst = false;
 function inputFirstGesture() { if (!inputFirst) { inputFirst = true; if (INPUT.onFirst) INPUT.onFirst(); } }   // 最初の操作で音を有効化
 
@@ -7,10 +7,11 @@ function bindInput() {
   addEventListener('keydown', e => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     inputFirstGesture();
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (INPUT.onRetry && INPUT.onRetry()) return; INPUT.onOpen(); return; }   // Enter / Space＝開く（リザルト中は「もう一度」）
     const i = keyToIndex(e.key);
     if (i >= 0) { INPUT.onFloor(i); return; }
     if (e.key === 'o' || e.key === 'O') INPUT.onOpen();
-    else if (e.key === 'c' || e.key === 'C') INPUT.onClose();
+    else if (e.key === 'c' || e.key === 'C' || e.key === 'Backspace') INPUT.onClose();
   });
   addEventListener('pointerdown', inputFirstGesture, { passive: true });
   // ダブルタップ拡大・ピンチ・スクロール・長押しメニューを止める

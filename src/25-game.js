@@ -258,7 +258,7 @@ function bjScore(prev, next) {                                      // prev の�
 function breakJa(text, limit) {
   limit = limit || (CFG.game.speech && CFG.game.speech.lineChars) || 13;
   const parts = String(text).split('\n'), out = [];
-  parts.forEach(p => { out.push(...bjWrap(p.trim(), limit)); });
+  parts.forEach(p => { const ls = bjWrap(p.trim(), limit); while (ls.length > 1 && ls[ls.length - 1].replace(/[、。？！…ー ]/g, '').length <= 3) { const l = ls.pop(); ls[ls.length - 1] += l; } out.push(...ls); });   // 末尾が 3 文字以下の行は作らない（前の行に詰める）
   return out.join('\n');
 }
 function bjWrap(s, limit) {
@@ -267,7 +267,7 @@ function bjWrap(s, limit) {
   for (let i = 0; i < t.length - 1; i++) {
     left += t[i].length;
     const sc = bjScore(t[i], t[i + 1]), right = total - left;
-    if (!sc || left < 3 || right < 3) continue;
+    if (!sc || left < 3 || right < 4) continue;
     const v = sc * 10 - Math.abs(left - total / 2) - (left > limit ? 20 : 0);
     if (v > bestV) { bestV = v; best = left; }
   }

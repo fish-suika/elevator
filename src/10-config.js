@@ -33,7 +33,7 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
-    speech: { lineChars: 13, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
+    speech: { lineChars: 15, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
     resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
     bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定

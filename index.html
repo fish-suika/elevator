@@ -57,7 +57,7 @@
   #regMemo small{font-size:calc(var(--u)*3);letter-spacing:.1em;opacity:.8}
   #regMemo .m{display:flex;align-items:center;gap:calc(var(--u)*1.4);padding:calc(var(--u)*0.5) calc(var(--u)*2);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*3.6);font-weight:700;font-variant-numeric:tabular-nums}
   #regMemo .m i{width:calc(var(--u)*2.6);height:calc(var(--u)*2.6);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
-  #speech{position:absolute;left:50%;top:calc(var(--u)*46);transform:translate(-50%,-100%);z-index:6;width:max-content;max-width:70%;padding:calc(var(--u)*2.2) calc(var(--u)*3.6);white-space:pre-line;line-height:1.35;
+  #speech{position:absolute;left:50%;top:calc(var(--u)*46);transform:translate(-50%,-100%);z-index:6;width:max-content;max-width:94%;padding:calc(var(--u)*2.2) calc(var(--u)*3.6);white-space:pre;line-height:1.35;
     border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.4);font-weight:700;letter-spacing:.03em;text-align:center;
     opacity:0;transition:opacity .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
   #speech.on{opacity:1}
@@ -85,6 +85,16 @@
   #retry{margin-top:calc(var(--u)*4);padding:calc(var(--u)*3.5) calc(var(--u)*12);border:2px solid #aab3c2;border-radius:calc(var(--u)*4);background:linear-gradient(#3b4252,#252a34);color:var(--ink);font-size:calc(var(--u)*5.6);font-weight:700;letter-spacing:.2em}
   #retry:active{transform:translateY(2px)}
 
+  /* ---- スタート画面 ---- */
+  #title{position:absolute;inset:0;z-index:25;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*5);background:rgba(6,8,12,.62);text-align:center;padding:0 calc(var(--u)*6)}
+  #title.on{display:flex}
+  #title h1{font-size:calc(var(--u)*9.5);letter-spacing:.14em;color:var(--amber);text-shadow:0 0 22px rgba(255,170,50,.6);font-weight:900}
+  #title .sub{font-size:calc(var(--u)*4);opacity:.85;letter-spacing:.1em}
+  #title .how{font-size:calc(var(--u)*4.4);line-height:1.7;padding:calc(var(--u)*3.5) calc(var(--u)*5);border-radius:calc(var(--u)*4);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.2)}
+  #title .how b{color:var(--amber);letter-spacing:.2em}
+  #title .how small{display:block;margin-top:calc(var(--u)*1.5);font-size:calc(var(--u)*3.4);opacity:.85;line-height:1.6}
+  #startBtn{margin-top:calc(var(--u)*3);padding:calc(var(--u)*4) calc(var(--u)*16);border:2px solid var(--amber);border-radius:calc(var(--u)*4);background:linear-gradient(#6b4a1c,#3a2810);color:var(--amber);font-size:calc(var(--u)*6.5);font-weight:900;letter-spacing:.3em;box-shadow:0 0 18px rgba(255,170,50,.5);animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{50%{box-shadow:0 0 30px rgba(255,170,50,.9)}}
   /* ---- Phase 4：エンディングの暗転・「本日の勤務終了」 ---- */
   #dim{position:absolute;left:0;right:0;top:0;height:62%;z-index:3;background:#000;opacity:0;pointer-events:none}
   #endBanner{position:absolute;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;background:rgba(244,244,240,.94);color:#22232a;font-size:calc(var(--u)*8.5);font-weight:700;letter-spacing:.2em;opacity:0;pointer-events:none;transition:opacity 1s}
@@ -116,6 +126,9 @@
   <div id="speech"></div>
   <div id="pops"></div>
   <div id="endBanner"></div>
+  <div id="title"><h1>エレベーター係</h1><p class="sub">ボタンを押すだけの、かんたんなお仕事</p>
+    <div class="how"><b>遊び方</b><br>客の注文を聞いて、<br>階数ボタンを押して<br>目的階へ案内しよう<small>スマホ：ボタンをタップ<br>PC：数字キー（0＝10F、B＝地下1階、N＝地下2階）</small></div>
+    <button id="startBtn">スタート</button></div>
   <div id="result">
     <h2 id="resHead">本日の勤務終了</h2>
     <div id="resStars"></div>
@@ -167,7 +180,7 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
-    speech: { lineChars: 13, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
+    speech: { lineChars: 15, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
     resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
     bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
@@ -483,7 +496,7 @@ function bjScore(prev, next) {                                      // prev の�
 function breakJa(text, limit) {
   limit = limit || (CFG.game.speech && CFG.game.speech.lineChars) || 13;
   const parts = String(text).split('\n'), out = [];
-  parts.forEach(p => { out.push(...bjWrap(p.trim(), limit)); });
+  parts.forEach(p => { const ls = bjWrap(p.trim(), limit); while (ls.length > 1 && ls[ls.length - 1].replace(/[、。？！…ー ]/g, '').length <= 3) { const l = ls.pop(); ls[ls.length - 1] += l; } out.push(...ls); });   // 末尾が 3 文字以下の行は作らない（前の行に詰める）
   return out.join('\n');
 }
 function bjWrap(s, limit) {
@@ -492,7 +505,7 @@ function bjWrap(s, limit) {
   for (let i = 0; i < t.length - 1; i++) {
     left += t[i].length;
     const sc = bjScore(t[i], t[i + 1]), right = total - left;
-    if (!sc || left < 3 || right < 3) continue;
+    if (!sc || left < 3 || right < 4) continue;
     const v = sc * 10 - Math.abs(left - total / 2) - (left > limit ? 20 : 0);
     if (v > bestV) { bestV = v; best = left; }
   }
@@ -614,12 +627,12 @@ function buildCar(scene) {
 
   // 右の壁のボタンパネル（飾り）
   const px = hw - 0.02, pz = -0.2;
-  const panel = boxMesh(0.04, 1.05, 0.34, 0x20242b, px, 1.35, pz, { metalness: 0.6, roughness: 0.4 });
+  const panel = boxMesh(0.04, 1.05, 0.34, 0x20242b, px, 1.68, pz, { metalness: 0.6, roughness: 0.4 });
   scene.add(panel);
   const bm = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x332a10, roughness: 0.4, metalness: 0.5 });
   for (let r = 0; r < 6; r++) for (let c = 0; c < 2; c++) {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), bm);
-    b.rotation.z = Math.PI / 2; b.position.set(px - 0.03, 1.72 - r * 0.15, pz - 0.07 + c * 0.14); scene.add(b);
+    b.rotation.z = Math.PI / 2; b.position.set(px - 0.03, 2.05 - r * 0.15, pz - 0.07 + c * 0.14); scene.add(b);
   }
 
   // 照明
@@ -923,6 +936,7 @@ function hudResult(info) {                                         // info = { s
     G.sayT = 0; G.mode = 'idle'; G.waitT = -(lines.length - 1) * CFG.game.sayGap;
   }
   function startGame() {
+    $('title').classList.remove('on');
     const dbg = parseDebug(G.debugHash != null ? G.debugHash : location.hash);
     G.plan = buildPlan(Math.random, CFG.game, dbg); G.max = planMax(G.plan);
     G.S = newScore(G.plan.length); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
@@ -1026,8 +1040,13 @@ function hudResult(info) {                                         // info = { s
   function touchReset()  /* 操作したら「待たせた」タイマーをやり直す（台詞中は負の値から） */ { G.waitT = G.sayQ.length ? -(G.sayQ.length) * CFG.game.sayGap : 0; }
 
   function stopHere() { if (!sameStopJudges(G.order, G.idx)) return false; G.mode = 'opening'; G.t = 0; return true; }   // 今いる階を「止まった階」として判定させる（扉が開いたら judgeStop）
+  function beginFromTitle() { inputFirstGesture(); sndResume(); sndClick(); startGame(); }   // スタート画面を閉じて開始（このクリックが音の最初の操作を兼ねる）
+  function showTitle() {                                     // 起動時：3D の車内（客なし）を背景にタイトルを出す
+    G.mode = 'title'; clearPeople(); clearSpeech(); hudMemo(null); hudRegMemo(null); setChg(''); hudResult(null); hudScore(G.S); G.order = null; hudSetFloor(G.idx); showFloor(); $('title').classList.add('on');
+  }
   function pressFloor(i) {
     inputFirstGesture(); sndResume(); touchReset();
+    if (G.mode === 'title') return;                          // スタート画面では階ボタンは無効
     if (G.mode === 'ending') { endingPress(); return; }
     if (!isEnabled(i)) { return; }
     if ((G.mode === 'moving' || G.mode === 'closing') && moveInputAllowed(G.order)) {  // Lv4 の変更後・Lv5 の通過停止だけ、扉が閉まる間・移動中でも受け付ける（次の階に着いたところで向きを変える）
@@ -1044,7 +1063,7 @@ function hudResult(info) {                                         // info = { s
   INPUT.onFloor = pressFloor;
   INPUT.onHere = () => pressFloor(G.idx);                    // Enter / Space：いまの階のボタン（扉を開く。最上階の「存在しない階」の判定にもなる）
   INPUT.onFirst = () => { sndInit(); sndResume(); };
-  INPUT.onRetry = () => { if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };
+  INPUT.onRetry = () => { if (G.mode === 'title') { beginFromTitle(); return true; } if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };   // Enter / Space：スタート画面→開始、リザルト→もう一度
 
   function showFloor() { hudSetFloor(G.idx); carSetDisplay(floorLabel(G.idx), G.mode === 'moving' ? G.dir : 0); carSetHall(G.idx); }
   function arrive() {
@@ -1153,10 +1172,11 @@ function hudResult(info) {                                         // info = { s
 
   document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) SND.ctx.suspend(); else SND.ctx.resume(); });   // タブを離れたら音を止める（戻ったとき dt は 0.05 秒で頭打ちなので状態は飛ばない）
   hudBuild(); bindInput(); fit();
+  $('startBtn').addEventListener('pointerdown', e => { e.preventDefault(); beginFromTitle(); });
   $('retry').addEventListener('pointerdown', e => { e.preventDefault(); inputFirstGesture(); sndResume(); sndClick(); startGame(); });
   addEventListener('hashchange', () => { G.debugHash = null; startGame(); });   // #lv=4 などの切り替えを即反映（デバッグ用）
   G.start = h => { G.debugHash = h; startGame(); };           // 確認用：GAME.start('#lv=4&n=2') でも同じ指定ができる（URL ハッシュが使えない環境向け）
-  startGame();
+  if (parseDebug(location.hash)) startGame(); else showTitle();   // #lv= / #ending のデバッグ指定があればタイトルを飛ばして即開始
   let last = performance.now();
   (function loop(now) {
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 時計が戻っても（dt が負でも）状態を壊さない

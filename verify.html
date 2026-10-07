@@ -55,7 +55,7 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
-    speech: { lineChars: 13, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
+    speech: { lineChars: 15, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
     resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
     bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
@@ -371,7 +371,7 @@ function bjScore(prev, next) {                                      // prev の�
 function breakJa(text, limit) {
   limit = limit || (CFG.game.speech && CFG.game.speech.lineChars) || 13;
   const parts = String(text).split('\n'), out = [];
-  parts.forEach(p => { out.push(...bjWrap(p.trim(), limit)); });
+  parts.forEach(p => { const ls = bjWrap(p.trim(), limit); while (ls.length > 1 && ls[ls.length - 1].replace(/[、。？！…ー ]/g, '').length <= 3) { const l = ls.pop(); ls[ls.length - 1] += l; } out.push(...ls); });   // 末尾が 3 文字以下の行は作らない（前の行に詰める）
   return out.join('\n');
 }
 function bjWrap(s, limit) {
@@ -380,7 +380,7 @@ function bjWrap(s, limit) {
   for (let i = 0; i < t.length - 1; i++) {
     left += t[i].length;
     const sc = bjScore(t[i], t[i + 1]), right = total - left;
-    if (!sc || left < 3 || right < 3) continue;
+    if (!sc || left < 3 || right < 4) continue;
     const v = sc * 10 - Math.abs(left - total / 2) - (left > limit ? 20 : 0);
     if (v > bestV) { bestV = v; best = left; }
   }
@@ -769,12 +769,15 @@ const ALL_LINES = (() => {
   return Array.from(set);
 })();
 const BAD_SPLIT = /\d\n階|地下\n|お\n願|願\nい|い\nし|し\nま|ま\nす|あ\nり|り\nが|が\nと|と\nう|\n(?:階|ます|です|ください)|(?:お願い|ください|ありがとう|ですか)\n/;
-check('台詞の改行：全台詞（Lv1〜6・エンディング ' + ALL_LINES.length + ' 種）が 3 行以内・各行 16 文字以内・元の文字は欠けない', ALL_LINES.every(t => { const b = breakJa(t), ls = b.split('\n'); return ls.length <= 3 && ls.every(l => l.length <= 16) && b.replace(/\s/g, '') === t.replace(/\s/g, ''); }), ALL_LINES.filter(t => { const ls = breakJa(t).split('\n'); return ls.length > 3 || ls.some(l => l.length > 16); }).join(' / '));
+check('台詞の改行：全台詞（Lv1〜6・エンディング ' + ALL_LINES.length + ' 種）が 3 行以内・各行 18 文字以内・元の文字は欠けない', ALL_LINES.every(t => { const b = breakJa(t), ls = b.split('\n'); return ls.length <= 3 && ls.every(l => l.length <= 18) && b.replace(/\s/g, '') === t.replace(/\s/g, ''); }), ALL_LINES.filter(t => { const ls = breakJa(t).split('\n'); return ls.length > 3 || ls.some(l => l.length > 18); }).join(' / '));
 check('台詞の改行：行頭が句読点・助詞にならず、「N階」「お願いします」「ありがとうございます」を分断しない', ALL_LINES.every(t => { const b = breakJa(t); return !BAD_SPLIT.test(b) && b.split('\n').every(l => !/^[、。？！ー]/.test(l)); }), ALL_LINES.filter(t => BAD_SPLIT.test(breakJa(t))).map(t => breakJa(t).replace(/\n/g, '⏎')).join(' / '));
 check('台詞の改行：短い台詞は折らない（「3階お願いします」「ありがとうございます」）', breakJa('3階お願いします') === '3階お願いします' && breakJa('ありがとうございます') === 'ありがとうございます' && breakJa('……あ、やっぱり5階です') === '……あ、やっぱり5階です');
 check('台詞の改行：句読点で折る（「10階、でも9階で一度ドアを開けて」→「10階、」の後）', breakJa('10階、でも9階で一度ドアを開けて') === '10階、\nでも9階で一度ドアを開けて' && breakJa('8階お願いします。5階には行かないで') === '8階お願いします。\n5階には行かないで');
 check('台詞の改行：長い台詞を句点で折る（「……ボタンに無いですね。」｜「一番上までお願いします」）・3 行以内', breakJa('……ボタンに無いですね。一番上までお願いします') === '……ボタンに無いですね。\n一番上までお願いします' && breakJa('えっ、ここ？ 先に4階で止まってから8階です').split('\n').length <= 3);
 check('台詞の改行：語尾の「？」「…」だけの行を作らない（エンディングの「ありがとうございました……？」）', ALL_LINES.every(t => breakJa(t).split('\n').every(l => l.replace(/[？！…。、]/g, '').length >= 2)));
+check('台詞の改行：最終行が 3 文字以下（「た」「だけ」など）にならない（全台詞・最終客を含む）', ALL_LINES.every(t => { const ls = breakJa(t).split('\n'); return ls.length === 1 || ls[ls.length - 1].replace(/[、。？！…ー ]/g, '').length > 3; }), ALL_LINES.filter(t => { const ls = breakJa(t).split('\n'); return ls.length > 1 && ls[ls.length - 1].replace(/[、。？！…ー ]/g, '').length <= 3; }).join(' / '));
+check('台詞の改行：最後の客の「100階お願いします」は 1 行に収まる／エンディングの全台詞が各行 18 文字以内', breakJa(CFG.ending.askLines[0]) === '100階お願いします' && CFG.ending.askLines.concat([CFG.ending.pressLine, CFG.ending.arriveLine, CFG.ending.exitLine]).concat(CFG.ending.says.map(s => s.text)).every(t => breakJa(t).split('\n').every(l => l.length <= 18)));
+check('台詞の改行：短い末尾が落ちる実例（「ありがとうございました……？」「……あれ、100階のボタン、無いですね」）が不自然に折れない', breakJa('ありがとうございました……？') === 'ありがとうございました……？' && breakJa('……あれ、100階のボタン、無いですね').split('\n').slice(-1)[0].replace(/[、。？！…]/g, '').length >= 4);
 check('台詞の改行：名前札（B：）の直後では折らない', ALL_LINES.every(t => !/[A-C]：\n/.test(breakJa(t))));
 check('吹き出しの調整値：1 行の文字数・最小表示秒・行き先変更の最小表示秒（変更のほうが長い）・端の余白', (() => { const s = CFG.game.speech; return s.lineChars >= 10 && s.lineChars <= 18 && s.minSec > 0 && s.changeSec > s.minSec && s.changeSec <= 6 && s.margin > 0 && s.topLimit > 0 && s.headY > 1.5; })());
 check('開く/閉じるボタンを廃止しても成立：最上階の ghost は同じ階のボタンで判定でき、台詞は「ボタンを押して」', (() => { const o = genOrder({ kind: 'ghost', lv: 6 }, fl(10), () => 0.1, floorsForLv(6)); return sameStopJudges(o, fl(10)) && orderLines(o)[1].text.indexOf('ボタンを押して') >= 0 && orderLines(o)[1].text.indexOf('扉') < 0; })());

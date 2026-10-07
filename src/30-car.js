@@ -55,12 +55,12 @@ function buildCar(scene) {
 
   // 右の壁のボタンパネル（飾り）
   const px = hw - 0.02, pz = -0.2;
-  const panel = boxMesh(0.04, 1.05, 0.34, 0x20242b, px, 1.35, pz, { metalness: 0.6, roughness: 0.4 });
+  const panel = boxMesh(0.04, 1.05, 0.34, 0x20242b, px, 1.68, pz, { metalness: 0.6, roughness: 0.4 });
   scene.add(panel);
   const bm = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x332a10, roughness: 0.4, metalness: 0.5 });
   for (let r = 0; r < 6; r++) for (let c = 0; c < 2; c++) {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), bm);
-    b.rotation.z = Math.PI / 2; b.position.set(px - 0.03, 1.72 - r * 0.15, pz - 0.07 + c * 0.14); scene.add(b);
+    b.rotation.z = Math.PI / 2; b.position.set(px - 0.03, 2.05 - r * 0.15, pz - 0.07 + c * 0.14); scene.add(b);
   }
 
   // 照明

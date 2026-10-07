@@ -86,6 +86,7 @@
     G.sayT = 0; G.mode = 'idle'; G.waitT = -(lines.length - 1) * CFG.game.sayGap;
   }
   function startGame() {
+    $('title').classList.remove('on');
     const dbg = parseDebug(G.debugHash != null ? G.debugHash : location.hash);
     G.plan = buildPlan(Math.random, CFG.game, dbg); G.max = planMax(G.plan);
     G.S = newScore(G.plan.length); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
@@ -189,8 +190,13 @@
   function touchReset()  /* 操作したら「待たせた」タイマーをやり直す（台詞中は負の値から） */ { G.waitT = G.sayQ.length ? -(G.sayQ.length) * CFG.game.sayGap : 0; }
 
   function stopHere() { if (!sameStopJudges(G.order, G.idx)) return false; G.mode = 'opening'; G.t = 0; return true; }   // 今いる階を「止まった階」として判定させる（扉が開いたら judgeStop）
+  function beginFromTitle() { inputFirstGesture(); sndResume(); sndClick(); startGame(); }   // スタート画面を閉じて開始（このクリックが音の最初の操作を兼ねる）
+  function showTitle() {                                     // 起動時：3D の車内（客なし）を背景にタイトルを出す
+    G.mode = 'title'; clearPeople(); clearSpeech(); hudMemo(null); hudRegMemo(null); setChg(''); hudResult(null); hudScore(G.S); G.order = null; hudSetFloor(G.idx); showFloor(); $('title').classList.add('on');
+  }
   function pressFloor(i) {
     inputFirstGesture(); sndResume(); touchReset();
+    if (G.mode === 'title') return;                          // スタート画面では階ボタンは無効
     if (G.mode === 'ending') { endingPress(); return; }
     if (!isEnabled(i)) { return; }
     if ((G.mode === 'moving' || G.mode === 'closing') && moveInputAllowed(G.order)) {  // Lv4 の変更後・Lv5 の通過停止だけ、扉が閉まる間・移動中でも受け付ける（次の階に着いたところで向きを変える）
@@ -207,7 +213,7 @@
   INPUT.onFloor = pressFloor;
   INPUT.onHere = () => pressFloor(G.idx);                    // Enter / Space：いまの階のボタン（扉を開く。最上階の「存在しない階」の判定にもなる）
   INPUT.onFirst = () => { sndInit(); sndResume(); };
-  INPUT.onRetry = () => { if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };
+  INPUT.onRetry = () => { if (G.mode === 'title') { beginFromTitle(); return true; } if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };   // Enter / Space：スタート画面→開始、リザルト→もう一度
 
   function showFloor() { hudSetFloor(G.idx); carSetDisplay(floorLabel(G.idx), G.mode === 'moving' ? G.dir : 0); carSetHall(G.idx); }
   function arrive() {
@@ -316,10 +322,11 @@
 
   document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) SND.ctx.suspend(); else SND.ctx.resume(); });   // タブを離れたら音を止める（戻ったとき dt は 0.05 秒で頭打ちなので状態は飛ばない）
   hudBuild(); bindInput(); fit();
+  $('startBtn').addEventListener('pointerdown', e => { e.preventDefault(); beginFromTitle(); });
   $('retry').addEventListener('pointerdown', e => { e.preventDefault(); inputFirstGesture(); sndResume(); sndClick(); startGame(); });
   addEventListener('hashchange', () => { G.debugHash = null; startGame(); });   // #lv=4 などの切り替えを即反映（デバッグ用）
   G.start = h => { G.debugHash = h; startGame(); };           // 確認用：GAME.start('#lv=4&n=2') でも同じ指定ができる（URL ハッシュが使えない環境向け）
-  startGame();
+  if (parseDebug(location.hash)) startGame(); else showTitle();   // #lv= / #ending のデバッグ指定があればタイトルを飛ばして即開始
   let last = performance.now();
   (function loop(now) {
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 時計が戻っても（dt が負でも）状態を壊さない

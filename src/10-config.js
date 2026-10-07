@@ -4,7 +4,7 @@ const CFG = {
   move: { stepSec: 0.85, doorSec: 1.1, startDelay: 0.3, arriveWait: 0.6, chimeFlash: 0.35 },   // 1階あたりの秒数／扉の開閉秒／閉じてから動くまで／到着してから開くまで
   shake: { amp: 0.014, freq: 41 },                                 // 移動中の画面振動
   car: { w: 2.8, h: 2.9, zBack: -1.5, zFront: 2.6, doorW: 1.4, doorH: 2.2 },
-  cam: { x: 0.3, y: 1.45, z: 2.2, lookX: 0, lookY: 1.3, lookZ: -1.5, hfov: 62 },   // 固定カメラ（hfov は横方向の画角。縦横比が変わっても横幅は同じ）
+  cam: { x: 0.3, y: 1.4, z: 2.2, lookX: 0, lookY: 1.5, lookZ: -1.5, hfov: 62 },   // 固定カメラ（hfov は横方向の画角。縦横比が変わっても横幅は同じ）
   person: { x: -0.35, z: -0.1, scale: 1 },
   audio: { master: 0.22 },
   game: {
@@ -33,6 +33,7 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
+    speech: { lineChars: 13, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
     resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
     bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定

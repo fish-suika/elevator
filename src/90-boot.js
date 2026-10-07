@@ -27,8 +27,9 @@
   // order = 今の組のオーダー、people = その乗客の 3D（降りたら null）、S.served = 終わった組数
   const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0,
               S: newScore(CFG.game.levelPlan.length), plan: [], max: 1, order: null, people: [], leaving: -1, res: null, reroute: -1, mt: 0,
-              sayQ: [], sayT: 0, memoShown: [], pt: 0, waitT: 0, styleBase: 0,
+              sayQ: [], sayT: 0, pend: null, sayHold: 0, chg: '', memoShown: [], pt: 0, waitT: 0, styleBase: 0,
               regulars: [], endingOn: true, ep: '', et: 0, ek: 0, ec: 0, labels: [], dimV: 0, dimTarget: 0, shakeMul: 1, bump: 0 };   // regulars = 直近に降りた客の見た目と階（usual 用）、swapT = swap の交換までの経過秒、ep = エンディングの段階   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
+  const HEADV = new THREE.Vector3();
   window.GAME = G;                                           // 確認用
   const busy = () => G.mode !== 'idle';
 
@@ -36,12 +37,19 @@
 
   // ---- 台詞（キューで順に出す。大事な出来事は sayNow で割り込む） ----
   function flushSay() { while (G.sayQ.length) { const it = G.sayQ.shift(); if (it.reveal) it.reveal(); } }
-  function sayNow(text) { flushSay(); hudSpeech(text); }
+  function firstAlive() { const k = G.order ? G.order.riders.findIndex(r => !r.off) : -1; return k >= 0 ? k : 0; }
+  function speakerOf(name) { const k = name && G.order ? G.order.riders.findIndex(r => r.name === name) : -1; return k >= 0 ? k : firstAlive(); }   // 台詞の主（名前 → 乗客の添字。名前なしは残っている先頭の客）
+  function showSpeech(text, who, hold) { G.pend = null; hudSpeech(text, who == null ? firstAlive() : who); G.sayHold = hold != null ? hold : CFG.game.speech.minSec; }
+  function sayNow(text, who, hold) { flushSay(); if (G.sayHold > 0) { G.pend = { text: text, who: who, hold: hold }; return; } showSpeech(text, who, hold); }   // 直前の台詞の最小表示秒数のあいだは次の台詞を待たせる（最後の 1 つだけ残る）
+  function clearSpeech() { hudSpeech(null); G.pend = null; G.sayHold = 0; }
+  function setChg(text) { G.chg = text; hudChg(text); }                                  // 行き先変更のメモ（台詞が消えたあとも組が終わるまで残る）
   function doRotate() {                                      // swap：1 人降りて 2 人残ったところで、残りの 2 人が行き先を変える（台詞で明示。メモは自動では直さない）
     const lines = rotateRiders(G.order, G.idx, Math.random, floorsForLv(G.order.lv)); if (!lines) return;
     if (CFG.game.swapMemoAuto) G.order.riders.forEach(r => { r.shown = null; });
     refreshMemo(); sndNote(); flushSay();
-    hudSpeech(lines[0].who + '：' + lines[0].text); G.sayQ = [{ text: lines[1].who + '：' + lines[1].text }]; G.sayT = CFG.game.sayGap; G.waitT = -CFG.game.sayGap;
+    const chgS = CFG.game.speech.changeSec, rest = G.order.riders.filter(r => !r.off);
+    setChg(rest.map(r => r.name + '→' + floorSpeech(r.dest)).join('　'));                // 例「A→8階　C→3階」台詞が消えても確認できる
+    showSpeech(lines[0].who + '：' + lines[0].text, speakerOf(lines[0].who), CFG.game.sayGap); G.sayQ = [{ text: lines[1].who + '：' + lines[1].text, who: speakerOf(lines[1].who), hold: chgS }]; G.sayT = CFG.game.sayGap; G.waitT = -CFG.game.sayGap;
   }
   function refreshRegMemo() {                                // usual 用：見た目（シャツの色）ごとに最後に降りた階。Lv6 の間だけ出す
     const on = CFG.game.showRegularMemo && G.order && G.order.lv >= 6 && G.regulars.length;
@@ -70,11 +78,11 @@
       scene.add(p); return p;
     });
     G.memoShown = o.riders.map(() => false); refreshMemo(); refreshRegMemo();
-    G.sayQ = []; hudSpeech(null); G.reroute = -1; G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
+    G.sayQ = []; clearSpeech(); setChg(''); G.reroute = -1; G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
   }
   function startIntro() {                                    // 乗り終わったら台詞。複数乗客は 1 人ずつ順に
     const lines = orderLines(G.order);
-    G.sayQ = lines.map((ln, k) => ({ text: (ln.who ? ln.who + '：' : '') + ln.text, reveal: () => { G.memoShown[k] = true; refreshMemo(); } }));
+    G.sayQ = lines.map((ln, k) => ({ text: (ln.who ? ln.who + '：' : '') + ln.text, who: speakerOf(ln.who), reveal: () => { G.memoShown[k] = true; refreshMemo(); } }));
     G.sayT = 0; G.mode = 'idle'; G.waitT = -(lines.length - 1) * CFG.game.sayGap;
   }
   function startGame() {
@@ -83,8 +91,8 @@
     G.S = newScore(G.plan.length); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
     G.regulars = []; hudRegMemo(null); G.endingOn = !dbg || !!dbg.end; G.ep = ''; G.et = 0; G.shakeMul = 1; G.dimV = G.dimTarget = 0; hudDim(0); hudBanner(null); sndRumbleStop();
     if (dbg && dbg.ending) { G.max = planMax(buildPlan(Math.random, CFG.game, null)); G.S.score = Math.round(G.max * 0.9); }   // #ending：通常の満点の 9 割を取った状態でエンディングだけ見る
-    clearPeople(); hudSpeech(null); hudMemo(null); setDoorTarget(1);
-    G.sayQ = []; G.leaving = -1; G.res = null; G.order = null; G.c = 0; G.bump = 0; G.waitT = 0; G.pt = 0; G.mt = 0; G.flash = 0; hudFlash(0); hudBanner(null);
+    clearPeople(); clearSpeech(); hudMemo(null); setDoorTarget(1);
+    setChg(''); G.sayQ = []; G.leaving = -1; G.res = null; G.order = null; G.c = 0; G.bump = 0; G.waitT = 0; G.pt = 0; G.mt = 0; G.flash = 0; hudFlash(0); hudBanner(null);
     HUD.btns.forEach((b, k) => hudLit(k, false)); $('pops').innerHTML = ''; $('msg').classList.remove('on'); hudRegMemo(null);
     G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; G.reroute = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
     if (G.plan.length) spawnGroup(); else startEnding();
@@ -94,7 +102,7 @@
   // ---- エンディング：最後の客が乗る → 何かボタンを押す → 暗くなりながら存在しない階へ上昇 → 謎の階 → 何もない → 勤務終了 → リザルト ----
   function startEnding() {
     const E = CFG.ending;
-    hudRegMemo(null); setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); hudSpeech(null); G.sayQ = []; setDoorTarget(1);
+    setChg(''); hudRegMemo(null); setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); clearSpeech(); G.sayQ = []; setDoorTarget(1);
     const p = makePerson(E.style); p.userData.slot = CFG.game.slots[1][0]; p.userData.color = '#' + E.style.shirt.toString(16).padStart(6, '0');
     p.position.set(CFG.game.doorX, 0, CFG.game.doorZ); p.scale.setScalar(CFG.person.scale); scene.add(p); G.people = [p];
   }
@@ -143,7 +151,7 @@
         const k = Math.min(1, G.et / gm.exitSec), f = p.userData.from;
         p.rotation.y += (Math.PI - p.rotation.y) * Math.min(1, dt * 12);
         p.position.x = f[0] + (gm.doorX - f[0]) * k; p.position.z = f[1] + (gm.doorZ - f[1]) * k; walkPerson(p, G.time); walking.add(p);
-        if (k >= 1) { scene.remove(p); G.people = []; hudSpeech(null); G.ep = 'void'; G.et = 0; }
+        if (k >= 1) { scene.remove(p); G.people = []; clearSpeech(); G.ep = 'void'; G.et = 0; }
         break;
       }
       case 'void': if (G.et >= E.voidSec) { G.ep = 'banner'; G.et = 0; hudBanner(E.banner); } break;
@@ -164,19 +172,17 @@
     popScore(res.deltas);
     if (res.off >= 0) {
       const r = o.riders[res.off];
-      sndCorrect(); sayNow(offLine(o, r)); refreshMemo();
+      sndCorrect(); flushSay(); showSpeech(offLine(o, r), res.off); refreshMemo();
       const si = G.people[res.off].userData.style; if (si != null) { noteRegular(G.regulars, si, G.idx); refreshRegMemo(); }   // この見た目の客が降りた階を覚える（usual 用）
       G.leaving = res.off; G.mode = 'exiting'; G.pt = 0;
       G.people[res.off].userData.from = [G.people[res.off].position.x, G.people[res.off].position.z];
     } else if (res.changed) {
-      sndBad(); sayNow(changeLine(o)); G.mode = 'idle'; G.waitT = 0;
+      sndBad(); setChg('行き先変更 → ' + floorSpeech(o.changeTo)); sayNow(changeLine(o), firstAlive(), CFG.game.speech.changeSec); G.mode = 'idle'; G.waitT = 0;
     } else if (res.via) {
-      sndNote(); sayNow(viaDoneLine(o)); G.mode = 'idle'; G.waitT = 0;
+      sndNote(); sayNow(viaDoneLine(o), firstAlive(), CFG.game.speech.changeSec); G.mode = 'idle'; G.waitT = 0;
     } else {                                                 // 間違い（降りない階・禁止階・経由前）
       const first = res.deltas.length > 0; sndMiss(); G.bump = CFG.game.bump.wrong;
-      if (res.wrongKind === 'forbid') sayNow('えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに');
-      else if (isMulti(o)) sayNow(first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…');
-      else sayNow((first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o));
+      sayNow(wrongLine(o, first, res.wrongKind));
       G.mode = 'idle'; G.waitT = 0;
     }
   }
@@ -199,8 +205,7 @@
     setDoorTarget(0); G.mode = 'closing'; G.t = 0;
   }
   INPUT.onFloor = pressFloor;
-  INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); stopHere(); };
-  INPUT.onClose = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
+  INPUT.onHere = () => pressFloor(G.idx);                    // Enter / Space：いまの階のボタン（扉を開く。最上階の「存在しない階」の判定にもなる）
   INPUT.onFirst = () => { sndInit(); sndResume(); };
   INPUT.onRetry = () => { if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };
 
@@ -227,9 +232,10 @@
     carSetDoor(G.door);
 
     // 台詞キュー
+    if (G.sayHold > 0) { G.sayHold -= dt; if (G.sayHold <= 0 && G.pend) { const pd = G.pend; showSpeech(pd.text, pd.who, pd.hold); } }   // 直前の台詞の最小表示秒数が過ぎたら、待たせていた台詞を出す
     if (G.sayQ.length) {
       G.sayT -= dt;
-      if (G.sayT <= 0) { const it = G.sayQ.shift(); hudSpeech(it.text); if (it.reveal) it.reveal(); G.sayT = CFG.game.sayGap; }
+      if (G.sayT <= 0) { const it = G.sayQ.shift(); showSpeech(it.text, it.who, it.hold); if (it.reveal) it.reveal(); G.sayT = CFG.game.sayGap; }
     }
 
     const walking = new Set(), n = G.people.length;
@@ -243,7 +249,7 @@
     } else if (G.mode === 'moving') {
       G.mt += dt;
       if (G.order && G.order.kind === 'mid' && G.order.midState === 'pending' && G.mt >= CFG.game.midShoutSec) {   // Lv4：動いている最中に目的階が変わる
-        const line = midShout(G.order); sndBad(); sayNow(line);
+        const line = midShout(G.order); sndBad(); setChg('行き先変更 → ' + floorSpeech(G.order.midTo)); sayNow(line, 0, CFG.game.speech.changeSec);
       }
       if (G.t >= CFG.move.stepSec) {                         // 1 階進む
         G.t -= CFG.move.stepSec; G.idx = G.path[G.step++]; sndTick(); showFloor();
@@ -272,7 +278,7 @@
         p.rotation.y += (Math.PI - p.rotation.y) * Math.min(1, dt * 12);
         p.position.x = f[0] + (gm.doorX - f[0]) * k; p.position.z = f[1] + (gm.doorZ - f[1]) * k; walkPerson(p, G.time); walking.add(p);
         if (k >= 1) {
-          scene.remove(p); G.people[G.leaving] = null; G.leaving = -1; hudSpeech(null);
+          scene.remove(p); G.people[G.leaving] = null; G.leaving = -1; clearSpeech();
           if (G.res.done) { if (isFinished(G.S)) startFinish(); else spawnGroup(); }
           else { G.mode = 'idle'; G.waitT = 0; doRotate(); }
         }
@@ -300,6 +306,12 @@
     camera.position.set(C.x + Math.sin(k * 1.3) * sh + bp * 0.5, C.y + Math.sin(k) * sh + bp, C.z);
     camera.lookAt(C.lookX, C.lookY, C.lookZ);
     G.people.forEach(p => { if (p && !walking.has(p)) updatePerson(p, G.time); });
+    // 吹き出しは「いま話している人」の頭上へ（3D → 画面座標に投影）
+    if (SPK.on) {
+      const sp = SPK.who >= 0 ? G.people[SPK.who] : null; let hx = null, hy = null;
+      if (sp) { camera.updateMatrixWorld(); HEADV.set(sp.position.x, CFG.game.speech.headY * sp.scale.y, sp.position.z).project(camera); hx = (HEADV.x * 0.5 + 0.5) * view.clientWidth; hy = (-HEADV.y * 0.5 + 0.5) * view.clientHeight; }
+      hudPlaceSpeech(hx, hy, view.clientWidth);
+    }
   }
 
   document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) SND.ctx.suspend(); else SND.ctx.resume(); });   // タブを離れたら音を止める（戻ったとき dt は 0.05 秒で頭打ちなので状態は飛ばない）

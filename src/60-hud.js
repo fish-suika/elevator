@@ -11,8 +11,6 @@ function hudBuild() {
     b.addEventListener('pointerdown', e => { e.preventDefault(); INPUT.onFloor(i); });
     grid.appendChild(b); HUD.btns[i] = b;
   });
-  $('openBtn').addEventListener('pointerdown', e => { e.preventDefault(); INPUT.onOpen(); });
-  $('closeBtn').addEventListener('pointerdown', e => { e.preventDefault(); INPUT.onClose(); });
 }
 function hudSetFloor(i) {
   $('curN').textContent = floorLabel(i);
@@ -26,7 +24,23 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
 
 // ---- Phase 2：スコア・台詞・リザルト ----
 function hudScore(S) { $('scoreN').textContent = S.score; $('leftN').textContent = remaining(S); }
-function hudSpeech(text) { const s = $('speech'); if (!text) { s.classList.remove('on'); return; } s.textContent = text; s.classList.add('on'); }
+const SPK = { on: false, who: -1 };
+function hudSpeech(text, who) {                                    // 吹き出し。who = 話している乗客の添字（その人の頭上に出す。位置は hudPlaceSpeech が毎フレーム決める）。改行は breakJa
+  const s = $('speech');
+  if (!text) { s.classList.remove('on'); SPK.on = false; return; }
+  s.textContent = breakJa(text, CFG.game.speech.lineChars); SPK.who = who == null ? -1 : who; SPK.on = true; s.classList.add('on');
+}
+function hudPlaceSpeech(headX, headY, W) {                         // headX/headY = 話している人の頭の画面座標（px、枠内）。null なら中央。画面端ではみ出さないようにし、しっぽはその人へ向ける
+  if (!SPK.on) return;
+  const s = $('speech'), u = W / 100, m = CFG.game.speech.margin * u, bw = s.offsetWidth, bh = s.offsetHeight;
+  const hx = headX == null ? W / 2 : headX;
+  const left = Math.max(bw / 2 + m, Math.min(W - bw / 2 - m, hx));
+  const tail = Math.max(4 * u, Math.min(bw - 4 * u, hx - left + bw / 2));
+  const minBottom = CFG.game.speech.topLimit * u + bh;             // 上の「現在階」表示に食い込まない
+  const bottom = Math.max(minBottom, (headY == null ? CFG.game.speech.defaultY * u : headY) - CFG.game.speech.gap * u);
+  s.style.left = left + 'px'; s.style.top = bottom + 'px'; s.style.setProperty('--tail', tail + 'px');
+}
+function hudChg(text) { const c = $('chg'); if (!text) { c.classList.remove('on'); return; } c.textContent = text; c.classList.add('on'); }   // 行き先変更のメモ
 function hudEnabled() { HUD.btns.forEach((b, i) => b.classList.toggle('off', !isEnabled(i))); }   // 使える階が広がったらボタンを有効に
 function hudMemo(items) {                                          // 複数乗客のメモ [{ name, text, color, done }]。items が空 / CFG.game.showMemo=false なら隠す
   const m = $('memo'); m.innerHTML = '';

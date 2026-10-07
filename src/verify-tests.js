@@ -271,7 +271,7 @@ check('常連の記録：同じ見た目は上書き・新しいほど後ろ', (
   check('ghost：最上階から乗った場合も、そこで判定して降りる・ボーナス', r.off === 0 && sum(r) === 100 + G2.bonus.ghost);
   check('ghost：降りたあとは sameStopJudges が false', !sameStopJudges(o, top) && !sameStopJudges(null, top) && !sameStopJudges(mk('simple', [{ f: 3 }]), fl(3)));
   const L = orderLines(mkG(fl(2))).map(l => l.text), L2 = orderLines(mkG(top)).map(l => l.text);
-  check('台詞 ghost：「N階お願いします」＋最上階へ促す／最上階にいるときは「ここで扉を」', /階お願いします/.test(L[0]) && L[1].indexOf('一番上まで') >= 0 && L2[1].indexOf('ここで扉') >= 0);
+  check('台詞 ghost：「N階お願いします」＋最上階へ促す／最上階にいるときは「一番上のボタンを」', /階お願いします/.test(L[0]) && L[1].indexOf('一番上まで') >= 0 && L2[1].indexOf('一番上のボタン') >= 0);
   const o3 = mkG(fl(2)); o3.ghost = 13;
   check('台詞 ghost：降りるとき「やっぱり13階は無いですよね」・間違いのときは最上階のヒント', offLine(o3, o3.riders[0]).indexOf('13階は無い') >= 0 && orderReminder(o3).indexOf('一番上') >= 0);
 })();
@@ -352,6 +352,35 @@ check('常連の記録：同じ見た目は上書き・新しいほど後ろ', (
   check('既存の種別は新しい rule 欄が無くても従来どおり判定（rule 未設定）', (() => { const S4 = newScore(1), o4 = mk('simple', [{ f: 3 }]); return resolveStop(S4, o4, fl(3)).off === 0 && S4.score === 100; })());
   check('swap の調整値：メモは自動更新しない／常連メモは表示する／常連の候補は 5 人', G2.swapMemoAuto === false && G2.showRegularMemo === true && G2.regularPool === 5);
 })();
+
+// ---- Phase 5 修正：吹き出しの改行（全台詞）・台詞の最小表示秒・開く/閉じるボタン廃止 ----
+const ALL_LINES = (() => {
+  const set = new Set(), add = t => { if (t) set.add(t); };
+  const kinds = ['simple', 'change', 'mid', 'multi', 'via', 'viaOpen', 'pass', 'forbid', 'basement', 'up', 'usual', 'swap', 'ghost'];
+  const regs = [{ style: 1, floor: fl(7) }, { style: 3, floor: fl(-2) }];
+  kinds.forEach(k => [1, 6].forEach(lv => { const f = floorsForLv(lv); for (let c = 0; c < 12; c += 3) for (let q = 0; q < 6; q++) {
+    const o = genOrder({ kind: k, lv: lv, n: 3 }, c, RNGS[q * 5], f, regs); if (!o) continue;
+    orderLines(o).forEach(l => { add((l.who ? l.who + '：' : '') + l.text); });
+    add(changeLine(Object.assign({}, o, { changeTo: fl(5) }))); add(midLine(Object.assign({}, o, { midTo: fl(9) }))); if (o.riders[0].dest >= 0) add(viaDoneLine(o)); add(orderReminder(o));
+    o.riders.forEach(r => { add(offLine(o, r)); add(offLine(o, { name: '' })); });
+    [true, false].forEach(fi => { add(wrongLine(o, fi, 'wrong')); if (o.forbid >= 0) add(wrongLine(o, fi, 'forbid')); });
+    if (k === 'swap') { resolveStop(newScore(1), o, o.riders[1].dest); const ls = rotateRiders(o, o.riders[1].dest, () => 0.3, f); if (ls) ls.forEach(l => add(l.who + '：' + l.text)); }
+  } }));
+  const E = CFG.ending; E.askLines.concat([E.pressLine, E.arriveLine, E.exitLine]).concat(E.says.map(s => s.text)).forEach(add);
+  add('ありがとうございます'); add('A：ありがとうございます'); add('えっ、ここ？ 先に4階で止まってから8階です');
+  return Array.from(set);
+})();
+const BAD_SPLIT = /\d\n階|地下\n|お\n願|願\nい|い\nし|し\nま|ま\nす|あ\nり|り\nが|が\nと|と\nう|\n(?:階|ます|です|ください)|(?:お願い|ください|ありがとう|ですか)\n/;
+check('台詞の改行：全台詞（Lv1〜6・エンディング ' + ALL_LINES.length + ' 種）が 3 行以内・各行 16 文字以内・元の文字は欠けない', ALL_LINES.every(t => { const b = breakJa(t), ls = b.split('\n'); return ls.length <= 3 && ls.every(l => l.length <= 16) && b.replace(/\s/g, '') === t.replace(/\s/g, ''); }), ALL_LINES.filter(t => { const ls = breakJa(t).split('\n'); return ls.length > 3 || ls.some(l => l.length > 16); }).join(' / '));
+check('台詞の改行：行頭が句読点・助詞にならず、「N階」「お願いします」「ありがとうございます」を分断しない', ALL_LINES.every(t => { const b = breakJa(t); return !BAD_SPLIT.test(b) && b.split('\n').every(l => !/^[、。？！ー]/.test(l)); }), ALL_LINES.filter(t => BAD_SPLIT.test(breakJa(t))).map(t => breakJa(t).replace(/\n/g, '⏎')).join(' / '));
+check('台詞の改行：短い台詞は折らない（「3階お願いします」「ありがとうございます」）', breakJa('3階お願いします') === '3階お願いします' && breakJa('ありがとうございます') === 'ありがとうございます' && breakJa('……あ、やっぱり5階です') === '……あ、やっぱり5階です');
+check('台詞の改行：句読点で折る（「10階、でも9階で一度ドアを開けて」→「10階、」の後）', breakJa('10階、でも9階で一度ドアを開けて') === '10階、\nでも9階で一度ドアを開けて' && breakJa('8階お願いします。5階には行かないで') === '8階お願いします。\n5階には行かないで');
+check('台詞の改行：長い台詞を句点で折る（「……ボタンに無いですね。」｜「一番上までお願いします」）・3 行以内', breakJa('……ボタンに無いですね。一番上までお願いします') === '……ボタンに無いですね。\n一番上までお願いします' && breakJa('えっ、ここ？ 先に4階で止まってから8階です').split('\n').length <= 3);
+check('台詞の改行：語尾の「？」「…」だけの行を作らない（エンディングの「ありがとうございました……？」）', ALL_LINES.every(t => breakJa(t).split('\n').every(l => l.replace(/[？！…。、]/g, '').length >= 2)));
+check('台詞の改行：名前札（B：）の直後では折らない', ALL_LINES.every(t => !/[A-C]：\n/.test(breakJa(t))));
+check('吹き出しの調整値：1 行の文字数・最小表示秒・行き先変更の最小表示秒（変更のほうが長い）・端の余白', (() => { const s = CFG.game.speech; return s.lineChars >= 10 && s.lineChars <= 18 && s.minSec > 0 && s.changeSec > s.minSec && s.changeSec <= 6 && s.margin > 0 && s.topLimit > 0 && s.headY > 1.5; })());
+check('開く/閉じるボタンを廃止しても成立：最上階の ghost は同じ階のボタンで判定でき、台詞は「ボタンを押して」', (() => { const o = genOrder({ kind: 'ghost', lv: 6 }, fl(10), () => 0.1, floorsForLv(6)); return sameStopJudges(o, fl(10)) && orderLines(o)[1].text.indexOf('ボタンを押して') >= 0 && orderLines(o)[1].text.indexOf('扉') < 0; })());
+check('台詞に「開く」「閉じる」ボタンへの言及がない（全台詞）', ALL_LINES.every(t => !/開くボタン|閉じるボタン|「開く」|「閉じる」/.test(t)));
 
 // エンディングの純粋部分
 (function () {

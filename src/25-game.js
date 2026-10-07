@@ -129,7 +129,7 @@ function orderLines(o) {                                            // 乗った
     case 'forbid': return [{ who: '', text: d + 'お願いします。' + floorSpeech(o.forbid) + 'には行かないで' }];
     case 'swap': return o.riders.map(r => ({ who: r.name, text: floorSpeech(r.dest) + 'お願いします' }));
     case 'basement': return [{ who: '', text: d + 'お願いします' }];
-    case 'ghost': return [{ who: '', text: o.ghost + '階お願いします' }, { who: '', text: o.atTop ? '……ボタンに無いですね。もう一番上ですよね？ ここで扉を開けてください' : '……ボタンに無いですね。とりあえず一番上までお願いします' }];
+    case 'ghost': return [{ who: '', text: o.ghost + '階お願いします' }, { who: '', text: o.atTop ? 'ここが一番上ですよね？ 一番上のボタンを押してください' : '……ボタンに無いですね。一番上までお願いします' }];
     case 'up': return [{ who: '', text: (o.rule === 'below' ? '下' : '上') + 'に行きたいです' }, { who: '', text: '……何階かって？ ' + (o.rule === 'below' ? '下' : '上') + 'です。' + (o.rule === 'below' ? '下' : '上') + '。' }];
     case 'usual': return [{ who: '', text: 'いつものところで' }, { who: '', text: '前にも乗りましたよね？ あそこです' }];
     default: return [{ who: '', text: d + 'お願いします' }];
@@ -140,7 +140,7 @@ function midLine(o) { return 'すみません！' + floorSpeech(o.midTo) + 'に�
 function viaDoneLine(o) { const d = floorSpeech(o.riders[0].dest); return o.kind === 'pass' ? 'あ、ここです。そのまま' + d + 'へ' : 'はい、次は' + d + 'お願いします'; }
 function orderReminder(o) {                                         // 間違えたときに添える現在の注文
   const r = o.riders.find(x => !x.off); if (!r) return '';
-  if (o.rule === 'ghost') return o.ghost + '階ですよ。ボタンに無いなら、一番上まで行ってみてください';
+  if (o.rule === 'ghost') return o.ghost + '階ですよ。一番上まで行ってみて';
   if (o.rule === 'above' || o.rule === 'below') return (o.rule === 'above' ? '上' : '下') + 'です、' + (o.rule === 'above' ? '上' : '下') + '！';
   if (o.rule === 'any') return 'いつものところ、です';
   if (o.kind === 'usual') return 'いつもの、前に降りた階です';
@@ -234,4 +234,52 @@ function rankFor(score, max, g) {
 function noteRegular(list, style, floor) {
   for (let k = list.length - 1; k >= 0; k--) if (list[k].style === style) list.splice(k, 1);
   list.push({ style: style, floor: floor });
+}
+
+// ---- 吹き出しの改行（意味の切れ目で折る。「N階」「お願いします」などは分断しない） ----
+// 区切り候補: 句読点（、。？！…）の直後（強）／空白／助詞（は が を に で と も へ まで から）の直後／「て」の直後（弱）。両側 3 文字以上。1 行 limit 文字を超えるときだけ折る
+const BJ_ATOM = /(?:地下)?\d+階|お願いします|ありがとうございました|ありがとうございます|ありがとう|いいですか|ですか|ですよね|ですよ|ですね|ください|ません|ました|ます|です|一番上|そのあと|やっぱり|とりあえず|いつもの|ところ|あそこ|行き先|目的地|ごめん|すみません|ドア|扉|ボタン|初めて|通過する|[ァ-ヶー]+|[A-Z]：/g;
+function bjTokens(s) {
+  const out = []; let i = 0; BJ_ATOM.lastIndex = 0;
+  while (i < s.length) {
+    BJ_ATOM.lastIndex = i; const m = BJ_ATOM.exec(s);
+    if (m && m.index === i) { out.push(m[0]); i += m[0].length; } else { out.push(s[i]); i++; }
+  }
+  return out;
+}
+function bjScore(prev, next) {                                      // prev の直後で折る良さ（0 = 折れない）
+  if (!next || /^[、。？！…ー）」]/.test(next) || /：$/.test(prev)) return 0;
+  if (/[、。？！]$/.test(prev) || /…$/.test(prev) && !/^…/.test(next)) return 3;
+  if (/^\s+$/.test(prev) || /^\s/.test(next)) return 3;
+  if (/^(?:は|が|を|に|で|と|も|へ|まで|から)$/.test(prev) && !/^(?:は|が|を|に|で|と|も|へ|の)/.test(next)) return 2;
+  if (prev === 'て' && !/^[、。]/.test(next)) return 1;
+  return 0;
+}
+function breakJa(text, limit) {
+  limit = limit || (CFG.game.speech && CFG.game.speech.lineChars) || 13;
+  const parts = String(text).split('\n'), out = [];
+  parts.forEach(p => { out.push(...bjWrap(p.trim(), limit)); });
+  return out.join('\n');
+}
+function bjWrap(s, limit) {
+  if (s.length <= limit) return [s];
+  const t = bjTokens(s), total = s.length; let best = -1, bestV = -1e9, left = 0;
+  for (let i = 0; i < t.length - 1; i++) {
+    left += t[i].length;
+    const sc = bjScore(t[i], t[i + 1]), right = total - left;
+    if (!sc || left < 3 || right < 3) continue;
+    const v = sc * 10 - Math.abs(left - total / 2) - (left > limit ? 20 : 0);
+    if (v > bestV) { bestV = v; best = left; }
+  }
+  if (best < 0) {                                                   // 折れる所が無い：短ければそのまま、長ければ limit で強制（原則ここには来ない）
+    if (s.length <= limit + 3) return [s];
+    return [s.slice(0, limit)].concat(bjWrap(s.slice(limit), limit));
+  }
+  return [s.slice(0, best).trim()].concat(bjWrap(s.slice(best).trim(), limit));
+}
+// 間違えて止まったときの台詞（第 1 回は「えっ、ここ？」、禁止階・複数乗客は専用）
+function wrongLine(o, first, kind) {
+  if (kind === 'forbid') return 'えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに';
+  if (isMulti(o)) return first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…';
+  return (first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o);
 }

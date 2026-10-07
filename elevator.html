@@ -26,7 +26,7 @@
   #arrow{width:calc(var(--u)*5);font-size:calc(var(--u)*6);color:var(--amber);text-align:center}
   #arrow.on{animation:blink .5s steps(2) infinite}
   @keyframes blink{50%{opacity:.25}}
-  #msg{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + var(--u)*20);z-index:5;text-align:center;font-size:calc(var(--u)*4);letter-spacing:.1em;
+  #msg{position:absolute;left:0;right:0;top:calc(var(--u)*92);z-index:5;text-align:center;font-size:calc(var(--u)*4);letter-spacing:.1em;
     opacity:0;transition:opacity .25s;pointer-events:none;text-shadow:0 2px 10px #000}
   #msg.on{opacity:1}
 
@@ -41,11 +41,6 @@
   .fb.lit{border-color:var(--amber);color:var(--amber);background:radial-gradient(circle at 50% 35%,#6b4a1c,#3a2810);box-shadow:0 0 14px rgba(255,170,50,.7),0 3px 0 #090b0f}
   .fb.here{color:var(--amber)}
   .fb.off{opacity:.28;border-color:#555;pointer-events:none;box-shadow:none}
-  #ctl{width:calc(var(--u)*25);display:flex;flex-direction:column;gap:calc(var(--u)*2)}
-  #ctl button{flex:1;border:2px solid #aab3c2;border-radius:calc(var(--u)*3);background:linear-gradient(#3b4252,#252a34);color:var(--ink);
-    font-size:calc(var(--u)*4.6);font-weight:700;letter-spacing:.1em;box-shadow:0 3px 0 #090b0f}
-  #ctl button:active{transform:translateY(2px);box-shadow:0 1px 0 #090b0f}
-  #ctl span{display:block;font-size:calc(var(--u)*7);line-height:1.1;margin-bottom:2px}
 
   /* ---- Phase 2：スコア・台詞・リザルト ---- */
   .stat{position:absolute;top:calc(env(safe-area-inset-top) + var(--u)*3);z-index:5;pointer-events:none;line-height:1.15;text-shadow:0 2px 8px #000}
@@ -54,7 +49,7 @@
   #statL{left:calc(var(--u)*3)} #statR{right:calc(var(--u)*3);text-align:right}
   #memo{position:absolute;left:calc(var(--u)*3);top:calc(env(safe-area-inset-top) + var(--u)*15);z-index:5;pointer-events:none;display:none;flex-direction:column;gap:calc(var(--u)*1);text-shadow:0 2px 8px #000}
   #memo.on{display:flex}
-  #memo .m{display:flex;align-items:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*0.8) calc(var(--u)*2.4);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*4.2);font-weight:700;font-variant-numeric:tabular-nums}
+  #memo .m{display:flex;align-items:center;gap:calc(var(--u)*1.6);padding:calc(var(--u)*0.5) calc(var(--u)*2.2);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*3.8);font-weight:700;font-variant-numeric:tabular-nums}
   #memo .m i{width:calc(var(--u)*3);height:calc(var(--u)*3);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
   #memo .m.done{opacity:.4;text-decoration:line-through}
   #regMemo{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*62);z-index:5;pointer-events:none;display:none;flex-direction:column;align-items:flex-end;gap:calc(var(--u)*0.8);text-shadow:0 2px 8px #000}
@@ -62,11 +57,13 @@
   #regMemo small{font-size:calc(var(--u)*3);letter-spacing:.1em;opacity:.8}
   #regMemo .m{display:flex;align-items:center;gap:calc(var(--u)*1.4);padding:calc(var(--u)*0.5) calc(var(--u)*2);border-radius:calc(var(--u)*3);background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.18);font-size:calc(var(--u)*3.6);font-weight:700;font-variant-numeric:tabular-nums}
   #regMemo .m i{width:calc(var(--u)*2.6);height:calc(var(--u)*2.6);border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
-  #speech{text-wrap:balance;position:absolute;left:50%;top:calc(var(--u)*21);transform:translateX(-50%) scale(.9);z-index:5;max-width:86%;padding:calc(var(--u)*2.4) calc(var(--u)*4);
-    border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.6);font-weight:700;letter-spacing:.04em;text-align:center;
-    opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
-  #speech.on{opacity:1;transform:translateX(-50%) scale(1)}
-  #speech::after{content:"";position:absolute;left:50%;bottom:calc(var(--u)*-2.2);margin-left:calc(var(--u)*-1.5);border:calc(var(--u)*1.8) solid transparent;border-top-color:#fffdf5;border-bottom:0}
+  #speech{position:absolute;left:50%;top:calc(var(--u)*46);transform:translate(-50%,-100%);z-index:6;width:max-content;max-width:70%;padding:calc(var(--u)*2.2) calc(var(--u)*3.6);white-space:pre-line;line-height:1.35;
+    border-radius:calc(var(--u)*4);background:#fffdf5;color:#222;font-size:calc(var(--u)*4.4);font-weight:700;letter-spacing:.03em;text-align:center;
+    opacity:0;transition:opacity .2s;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+  #speech.on{opacity:1}
+  #speech::after{content:"";position:absolute;left:var(--tail,50%);bottom:calc(var(--u)*-2.2);margin-left:calc(var(--u)*-1.8);border:calc(var(--u)*1.8) solid transparent;border-top-color:#fffdf5;border-bottom:0}
+  #chg{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;top:calc(var(--u)*100);z-index:5;pointer-events:none;display:none;padding:calc(var(--u)*0.8) calc(var(--u)*2.6);border-radius:calc(var(--u)*3);background:rgba(120,70,10,.82);border:1px solid rgba(255,190,90,.7);color:#ffe2b0;font-size:calc(var(--u)*3.8);font-weight:700;text-shadow:0 1px 4px #000}
+  #chg.on{display:block}
   #pops{position:absolute;left:50%;top:calc(var(--u)*20);z-index:6;pointer-events:none}
   .pop{position:absolute;left:0;transform:translateX(-50%);font-size:calc(var(--u)*6.5);font-weight:900;white-space:nowrap;text-shadow:0 2px 8px #000;animation:floatUp 1s ease-out forwards}
   .pop.plus{color:#7ee08c} .pop.minus{color:#ff7b6b}
@@ -114,6 +111,7 @@
   <div class="stat" id="statL"><small>SCORE</small><b id="scoreN">0</b></div>
   <div class="stat" id="statR"><small>残り</small><b id="leftN">12</b><small style="display:inline"> 組</small></div>
   <div id="memo"></div>
+  <div id="chg"></div>
   <div id="regMemo"></div>
   <div id="speech"></div>
   <div id="pops"></div>
@@ -128,10 +126,6 @@
   </div>
   <div id="panel">
     <div id="grid"></div>
-    <div id="ctl">
-      <button id="openBtn"><span>◀▶</span>開く</button>
-      <button id="closeBtn"><span>▶◀</span>閉じる</button>
-    </div>
   </div>
 </div>
 <div id="rotate"><div class="phone"></div><p>縦画面にしてください</p></div>
@@ -144,7 +138,7 @@ const CFG = {
   move: { stepSec: 0.85, doorSec: 1.1, startDelay: 0.3, arriveWait: 0.6, chimeFlash: 0.35 },   // 1階あたりの秒数／扉の開閉秒／閉じてから動くまで／到着してから開くまで
   shake: { amp: 0.014, freq: 41 },                                 // 移動中の画面振動
   car: { w: 2.8, h: 2.9, zBack: -1.5, zFront: 2.6, doorW: 1.4, doorH: 2.2 },
-  cam: { x: 0.3, y: 1.45, z: 2.2, lookX: 0, lookY: 1.3, lookZ: -1.5, hfov: 62 },   // 固定カメラ（hfov は横方向の画角。縦横比が変わっても横幅は同じ）
+  cam: { x: 0.3, y: 1.4, z: 2.2, lookX: 0, lookY: 1.5, lookZ: -1.5, hfov: 62 },   // 固定カメラ（hfov は横方向の画角。縦横比が変わっても横幅は同じ）
   person: { x: -0.35, z: -0.1, scale: 1 },
   audio: { master: 0.22 },
   game: {
@@ -173,6 +167,7 @@ const CFG = {
     },
     showMemo: true,                                                // 複数乗客の目的階メモ（A:3 B:5）を HUD に出すか。Phase 4 以降で隠す用
     resultDelay: 0.8, popSec: 1.1,                                 // 最後の客が降りてからリザルトまで／+100 などの浮き文字の秒数
+    speech: { lineChars: 13, minSec: 1.2, changeSec: 3.6, headY: 1.95, margin: 2, topLimit: 18, gap: 1.2, defaultY: 46 },   // 吹き出し：1 行の文字数／最小表示秒／行き先変更の台詞の最小表示秒／画面端の余白・上の HUD を避ける高さ・頭との隙間・話し手がいないときの高さ（単位 u）
     resultAnim: { firstSec: 0.3, starSec: 0.35, rankDelay: 0.3, titleDelay: 0.6, countSec: 1.2 },   // リザルトの演出：最初の星／星の間隔／星のあとランクが出るまで／ランクのあと称号／スコアの数え上げ（秒）
     bump: { arrive: 0.02, wrong: 0.05, sec: 0.25 },                  // カメラの揺れ：到着のコトン／間違いのガクッ（振幅）と減衰秒
     ranks: [                                                      // 満点（全員正解＋ボーナス）に対する割合 min 以上で上から判定
@@ -359,7 +354,7 @@ function orderLines(o) {                                            // 乗った
     case 'forbid': return [{ who: '', text: d + 'お願いします。' + floorSpeech(o.forbid) + 'には行かないで' }];
     case 'swap': return o.riders.map(r => ({ who: r.name, text: floorSpeech(r.dest) + 'お願いします' }));
     case 'basement': return [{ who: '', text: d + 'お願いします' }];
-    case 'ghost': return [{ who: '', text: o.ghost + '階お願いします' }, { who: '', text: o.atTop ? '……ボタンに無いですね。もう一番上ですよね？ ここで扉を開けてください' : '……ボタンに無いですね。とりあえず一番上までお願いします' }];
+    case 'ghost': return [{ who: '', text: o.ghost + '階お願いします' }, { who: '', text: o.atTop ? 'ここが一番上ですよね？ 一番上のボタンを押してください' : '……ボタンに無いですね。一番上までお願いします' }];
     case 'up': return [{ who: '', text: (o.rule === 'below' ? '下' : '上') + 'に行きたいです' }, { who: '', text: '……何階かって？ ' + (o.rule === 'below' ? '下' : '上') + 'です。' + (o.rule === 'below' ? '下' : '上') + '。' }];
     case 'usual': return [{ who: '', text: 'いつものところで' }, { who: '', text: '前にも乗りましたよね？ あそこです' }];
     default: return [{ who: '', text: d + 'お願いします' }];
@@ -370,7 +365,7 @@ function midLine(o) { return 'すみません！' + floorSpeech(o.midTo) + 'に�
 function viaDoneLine(o) { const d = floorSpeech(o.riders[0].dest); return o.kind === 'pass' ? 'あ、ここです。そのまま' + d + 'へ' : 'はい、次は' + d + 'お願いします'; }
 function orderReminder(o) {                                         // 間違えたときに添える現在の注文
   const r = o.riders.find(x => !x.off); if (!r) return '';
-  if (o.rule === 'ghost') return o.ghost + '階ですよ。ボタンに無いなら、一番上まで行ってみてください';
+  if (o.rule === 'ghost') return o.ghost + '階ですよ。一番上まで行ってみて';
   if (o.rule === 'above' || o.rule === 'below') return (o.rule === 'above' ? '上' : '下') + 'です、' + (o.rule === 'above' ? '上' : '下') + '！';
   if (o.rule === 'any') return 'いつものところ、です';
   if (o.kind === 'usual') return 'いつもの、前に降りた階です';
@@ -464,6 +459,54 @@ function rankFor(score, max, g) {
 function noteRegular(list, style, floor) {
   for (let k = list.length - 1; k >= 0; k--) if (list[k].style === style) list.splice(k, 1);
   list.push({ style: style, floor: floor });
+}
+
+// ---- 吹き出しの改行（意味の切れ目で折る。「N階」「お願いします」などは分断しない） ----
+// 区切り候補: 句読点（、。？！…）の直後（強）／空白／助詞（は が を に で と も へ まで から）の直後／「て」の直後（弱）。両側 3 文字以上。1 行 limit 文字を超えるときだけ折る
+const BJ_ATOM = /(?:地下)?\d+階|お願いします|ありがとうございました|ありがとうございます|ありがとう|いいですか|ですか|ですよね|ですよ|ですね|ください|ません|ました|ます|です|一番上|そのあと|やっぱり|とりあえず|いつもの|ところ|あそこ|行き先|目的地|ごめん|すみません|ドア|扉|ボタン|初めて|通過する|[ァ-ヶー]+|[A-Z]：/g;
+function bjTokens(s) {
+  const out = []; let i = 0; BJ_ATOM.lastIndex = 0;
+  while (i < s.length) {
+    BJ_ATOM.lastIndex = i; const m = BJ_ATOM.exec(s);
+    if (m && m.index === i) { out.push(m[0]); i += m[0].length; } else { out.push(s[i]); i++; }
+  }
+  return out;
+}
+function bjScore(prev, next) {                                      // prev の直後で折る良さ（0 = 折れない）
+  if (!next || /^[、。？！…ー）」]/.test(next) || /：$/.test(prev)) return 0;
+  if (/[、。？！]$/.test(prev) || /…$/.test(prev) && !/^…/.test(next)) return 3;
+  if (/^\s+$/.test(prev) || /^\s/.test(next)) return 3;
+  if (/^(?:は|が|を|に|で|と|も|へ|まで|から)$/.test(prev) && !/^(?:は|が|を|に|で|と|も|へ|の)/.test(next)) return 2;
+  if (prev === 'て' && !/^[、。]/.test(next)) return 1;
+  return 0;
+}
+function breakJa(text, limit) {
+  limit = limit || (CFG.game.speech && CFG.game.speech.lineChars) || 13;
+  const parts = String(text).split('\n'), out = [];
+  parts.forEach(p => { out.push(...bjWrap(p.trim(), limit)); });
+  return out.join('\n');
+}
+function bjWrap(s, limit) {
+  if (s.length <= limit) return [s];
+  const t = bjTokens(s), total = s.length; let best = -1, bestV = -1e9, left = 0;
+  for (let i = 0; i < t.length - 1; i++) {
+    left += t[i].length;
+    const sc = bjScore(t[i], t[i + 1]), right = total - left;
+    if (!sc || left < 3 || right < 3) continue;
+    const v = sc * 10 - Math.abs(left - total / 2) - (left > limit ? 20 : 0);
+    if (v > bestV) { bestV = v; best = left; }
+  }
+  if (best < 0) {                                                   // 折れる所が無い：短ければそのまま、長ければ limit で強制（原則ここには来ない）
+    if (s.length <= limit + 3) return [s];
+    return [s.slice(0, limit)].concat(bjWrap(s.slice(limit), limit));
+  }
+  return [s.slice(0, best).trim()].concat(bjWrap(s.slice(best).trim(), limit));
+}
+// 間違えて止まったときの台詞（第 1 回は「えっ、ここ？」、禁止階・複数乗客は専用）
+function wrongLine(o, first, kind) {
+  if (kind === 'forbid') return 'えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに';
+  if (isMulti(o)) return first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…';
+  return (first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o);
 }
 // ===== 音（WebAudio。最初のタップで有効化。無くても成立） =====
 const SND = { ctx: null, master: null, rumble: null };
@@ -679,7 +722,7 @@ function walkPerson(p, t) {
   u.arms[0].rotation.x = -s * 0.5; u.arms[1].rotation.x = s * 0.5;
 }
 // ===== 入力（コールバック経由。操作の意味づけは 90-boot.js） =====
-const INPUT = { onFloor: null, onOpen: null, onClose: null, onFirst: null, onRetry: null };
+const INPUT = { onFloor: null, onHere: null, onFirst: null, onRetry: null };
 let inputFirst = false;
 function inputFirstGesture() { if (!inputFirst) { inputFirst = true; if (INPUT.onFirst) INPUT.onFirst(); } }   // 最初の操作で音を有効化
 
@@ -687,11 +730,9 @@ function bindInput() {
   addEventListener('keydown', e => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     inputFirstGesture();
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (INPUT.onRetry && INPUT.onRetry()) return; INPUT.onOpen(); return; }   // Enter / Space＝開く（リザルト中は「もう一度」）
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (INPUT.onRetry && INPUT.onRetry()) return; INPUT.onHere(); return; }   // Enter / Space＝いまの階のボタン（扉が開く）。リザルト中は「もう一度」
     const i = keyToIndex(e.key);
     if (i >= 0) { INPUT.onFloor(i); return; }
-    if (e.key === 'o' || e.key === 'O') INPUT.onOpen();
-    else if (e.key === 'c' || e.key === 'C' || e.key === 'Backspace') INPUT.onClose();
   });
   addEventListener('pointerdown', inputFirstGesture, { passive: true });
   // ダブルタップ拡大・ピンチ・スクロール・長押しメニューを止める
@@ -713,8 +754,6 @@ function hudBuild() {
     b.addEventListener('pointerdown', e => { e.preventDefault(); INPUT.onFloor(i); });
     grid.appendChild(b); HUD.btns[i] = b;
   });
-  $('openBtn').addEventListener('pointerdown', e => { e.preventDefault(); INPUT.onOpen(); });
-  $('closeBtn').addEventListener('pointerdown', e => { e.preventDefault(); INPUT.onClose(); });
 }
 function hudSetFloor(i) {
   $('curN').textContent = floorLabel(i);
@@ -728,7 +767,23 @@ function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.ad
 
 // ---- Phase 2：スコア・台詞・リザルト ----
 function hudScore(S) { $('scoreN').textContent = S.score; $('leftN').textContent = remaining(S); }
-function hudSpeech(text) { const s = $('speech'); if (!text) { s.classList.remove('on'); return; } s.textContent = text; s.classList.add('on'); }
+const SPK = { on: false, who: -1 };
+function hudSpeech(text, who) {                                    // 吹き出し。who = 話している乗客の添字（その人の頭上に出す。位置は hudPlaceSpeech が毎フレーム決める）。改行は breakJa
+  const s = $('speech');
+  if (!text) { s.classList.remove('on'); SPK.on = false; return; }
+  s.textContent = breakJa(text, CFG.game.speech.lineChars); SPK.who = who == null ? -1 : who; SPK.on = true; s.classList.add('on');
+}
+function hudPlaceSpeech(headX, headY, W) {                         // headX/headY = 話している人の頭の画面座標（px、枠内）。null なら中央。画面端ではみ出さないようにし、しっぽはその人へ向ける
+  if (!SPK.on) return;
+  const s = $('speech'), u = W / 100, m = CFG.game.speech.margin * u, bw = s.offsetWidth, bh = s.offsetHeight;
+  const hx = headX == null ? W / 2 : headX;
+  const left = Math.max(bw / 2 + m, Math.min(W - bw / 2 - m, hx));
+  const tail = Math.max(4 * u, Math.min(bw - 4 * u, hx - left + bw / 2));
+  const minBottom = CFG.game.speech.topLimit * u + bh;             // 上の「現在階」表示に食い込まない
+  const bottom = Math.max(minBottom, (headY == null ? CFG.game.speech.defaultY * u : headY) - CFG.game.speech.gap * u);
+  s.style.left = left + 'px'; s.style.top = bottom + 'px'; s.style.setProperty('--tail', tail + 'px');
+}
+function hudChg(text) { const c = $('chg'); if (!text) { c.classList.remove('on'); return; } c.textContent = text; c.classList.add('on'); }   // 行き先変更のメモ
 function hudEnabled() { HUD.btns.forEach((b, i) => b.classList.toggle('off', !isEnabled(i))); }   // 使える階が広がったらボタンを有効に
 function hudMemo(items) {                                          // 複数乗客のメモ [{ name, text, color, done }]。items が空 / CFG.game.showMemo=false なら隠す
   const m = $('memo'); m.innerHTML = '';
@@ -809,8 +864,9 @@ function hudResult(info) {                                         // info = { s
   // order = 今の組のオーダー、people = その乗客の 3D（降りたら null）、S.served = 終わった組数
   const G = { idx: floorIndexOf(CFG.floors.startFloor), door: 1, doorTarget: 1, mode: 'idle', dest: -1, path: [], step: 0, t: 0, dir: 0, flash: 0, time: 0,
               S: newScore(CFG.game.levelPlan.length), plan: [], max: 1, order: null, people: [], leaving: -1, res: null, reroute: -1, mt: 0,
-              sayQ: [], sayT: 0, memoShown: [], pt: 0, waitT: 0, styleBase: 0,
+              sayQ: [], sayT: 0, pend: null, sayHold: 0, chg: '', memoShown: [], pt: 0, waitT: 0, styleBase: 0,
               regulars: [], endingOn: true, ep: '', et: 0, ek: 0, ec: 0, labels: [], dimV: 0, dimTarget: 0, shakeMul: 1, bump: 0 };   // regulars = 直近に降りた客の見た目と階（usual 用）、swapT = swap の交換までの経過秒、ep = エンディングの段階   // pt = 乗り降りの経過秒、waitT = 台詞後の無操作秒、mt = 動き出してからの秒、reroute = 移動中に押された新しい目的階
+  const HEADV = new THREE.Vector3();
   window.GAME = G;                                           // 確認用
   const busy = () => G.mode !== 'idle';
 
@@ -818,12 +874,19 @@ function hudResult(info) {                                         // info = { s
 
   // ---- 台詞（キューで順に出す。大事な出来事は sayNow で割り込む） ----
   function flushSay() { while (G.sayQ.length) { const it = G.sayQ.shift(); if (it.reveal) it.reveal(); } }
-  function sayNow(text) { flushSay(); hudSpeech(text); }
+  function firstAlive() { const k = G.order ? G.order.riders.findIndex(r => !r.off) : -1; return k >= 0 ? k : 0; }
+  function speakerOf(name) { const k = name && G.order ? G.order.riders.findIndex(r => r.name === name) : -1; return k >= 0 ? k : firstAlive(); }   // 台詞の主（名前 → 乗客の添字。名前なしは残っている先頭の客）
+  function showSpeech(text, who, hold) { G.pend = null; hudSpeech(text, who == null ? firstAlive() : who); G.sayHold = hold != null ? hold : CFG.game.speech.minSec; }
+  function sayNow(text, who, hold) { flushSay(); if (G.sayHold > 0) { G.pend = { text: text, who: who, hold: hold }; return; } showSpeech(text, who, hold); }   // 直前の台詞の最小表示秒数のあいだは次の台詞を待たせる（最後の 1 つだけ残る）
+  function clearSpeech() { hudSpeech(null); G.pend = null; G.sayHold = 0; }
+  function setChg(text) { G.chg = text; hudChg(text); }                                  // 行き先変更のメモ（台詞が消えたあとも組が終わるまで残る）
   function doRotate() {                                      // swap：1 人降りて 2 人残ったところで、残りの 2 人が行き先を変える（台詞で明示。メモは自動では直さない）
     const lines = rotateRiders(G.order, G.idx, Math.random, floorsForLv(G.order.lv)); if (!lines) return;
     if (CFG.game.swapMemoAuto) G.order.riders.forEach(r => { r.shown = null; });
     refreshMemo(); sndNote(); flushSay();
-    hudSpeech(lines[0].who + '：' + lines[0].text); G.sayQ = [{ text: lines[1].who + '：' + lines[1].text }]; G.sayT = CFG.game.sayGap; G.waitT = -CFG.game.sayGap;
+    const chgS = CFG.game.speech.changeSec, rest = G.order.riders.filter(r => !r.off);
+    setChg(rest.map(r => r.name + '→' + floorSpeech(r.dest)).join('　'));                // 例「A→8階　C→3階」台詞が消えても確認できる
+    showSpeech(lines[0].who + '：' + lines[0].text, speakerOf(lines[0].who), CFG.game.sayGap); G.sayQ = [{ text: lines[1].who + '：' + lines[1].text, who: speakerOf(lines[1].who), hold: chgS }]; G.sayT = CFG.game.sayGap; G.waitT = -CFG.game.sayGap;
   }
   function refreshRegMemo() {                                // usual 用：見た目（シャツの色）ごとに最後に降りた階。Lv6 の間だけ出す
     const on = CFG.game.showRegularMemo && G.order && G.order.lv >= 6 && G.regulars.length;
@@ -852,11 +915,11 @@ function hudResult(info) {                                         // info = { s
       scene.add(p); return p;
     });
     G.memoShown = o.riders.map(() => false); refreshMemo(); refreshRegMemo();
-    G.sayQ = []; hudSpeech(null); G.reroute = -1; G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
+    G.sayQ = []; clearSpeech(); setChg(''); G.reroute = -1; G.mode = 'boarding'; G.pt = 0; setDoorTarget(1);
   }
   function startIntro() {                                    // 乗り終わったら台詞。複数乗客は 1 人ずつ順に
     const lines = orderLines(G.order);
-    G.sayQ = lines.map((ln, k) => ({ text: (ln.who ? ln.who + '：' : '') + ln.text, reveal: () => { G.memoShown[k] = true; refreshMemo(); } }));
+    G.sayQ = lines.map((ln, k) => ({ text: (ln.who ? ln.who + '：' : '') + ln.text, who: speakerOf(ln.who), reveal: () => { G.memoShown[k] = true; refreshMemo(); } }));
     G.sayT = 0; G.mode = 'idle'; G.waitT = -(lines.length - 1) * CFG.game.sayGap;
   }
   function startGame() {
@@ -865,8 +928,8 @@ function hudResult(info) {                                         // info = { s
     G.S = newScore(G.plan.length); G.styleBase = Math.floor(Math.random() * PERSON_STYLES.length);
     G.regulars = []; hudRegMemo(null); G.endingOn = !dbg || !!dbg.end; G.ep = ''; G.et = 0; G.shakeMul = 1; G.dimV = G.dimTarget = 0; hudDim(0); hudBanner(null); sndRumbleStop();
     if (dbg && dbg.ending) { G.max = planMax(buildPlan(Math.random, CFG.game, null)); G.S.score = Math.round(G.max * 0.9); }   // #ending：通常の満点の 9 割を取った状態でエンディングだけ見る
-    clearPeople(); hudSpeech(null); hudMemo(null); setDoorTarget(1);
-    G.sayQ = []; G.leaving = -1; G.res = null; G.order = null; G.c = 0; G.bump = 0; G.waitT = 0; G.pt = 0; G.mt = 0; G.flash = 0; hudFlash(0); hudBanner(null);
+    clearPeople(); clearSpeech(); hudMemo(null); setDoorTarget(1);
+    setChg(''); G.sayQ = []; G.leaving = -1; G.res = null; G.order = null; G.c = 0; G.bump = 0; G.waitT = 0; G.pt = 0; G.mt = 0; G.flash = 0; hudFlash(0); hudBanner(null);
     HUD.btns.forEach((b, k) => hudLit(k, false)); $('pops').innerHTML = ''; $('msg').classList.remove('on'); hudRegMemo(null);
     G.idx = floorIndexOf(CFG.floors.startFloor); G.dest = -1; G.reroute = -1; hudArrow(0); showFloor(); hudScore(G.S); hudResult(null);
     if (G.plan.length) spawnGroup(); else startEnding();
@@ -876,7 +939,7 @@ function hudResult(info) {                                         // info = { s
   // ---- エンディング：最後の客が乗る → 何かボタンを押す → 暗くなりながら存在しない階へ上昇 → 謎の階 → 何もない → 勤務終了 → リザルト ----
   function startEnding() {
     const E = CFG.ending;
-    hudRegMemo(null); setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); hudSpeech(null); G.sayQ = []; setDoorTarget(1);
+    setChg(''); hudRegMemo(null); setLvFloors(6); G.mode = 'ending'; G.ep = 'board'; G.pt = 0; G.et = 0; G.order = null; hudMemo(null); clearSpeech(); G.sayQ = []; setDoorTarget(1);
     const p = makePerson(E.style); p.userData.slot = CFG.game.slots[1][0]; p.userData.color = '#' + E.style.shirt.toString(16).padStart(6, '0');
     p.position.set(CFG.game.doorX, 0, CFG.game.doorZ); p.scale.setScalar(CFG.person.scale); scene.add(p); G.people = [p];
   }
@@ -925,7 +988,7 @@ function hudResult(info) {                                         // info = { s
         const k = Math.min(1, G.et / gm.exitSec), f = p.userData.from;
         p.rotation.y += (Math.PI - p.rotation.y) * Math.min(1, dt * 12);
         p.position.x = f[0] + (gm.doorX - f[0]) * k; p.position.z = f[1] + (gm.doorZ - f[1]) * k; walkPerson(p, G.time); walking.add(p);
-        if (k >= 1) { scene.remove(p); G.people = []; hudSpeech(null); G.ep = 'void'; G.et = 0; }
+        if (k >= 1) { scene.remove(p); G.people = []; clearSpeech(); G.ep = 'void'; G.et = 0; }
         break;
       }
       case 'void': if (G.et >= E.voidSec) { G.ep = 'banner'; G.et = 0; hudBanner(E.banner); } break;
@@ -946,19 +1009,17 @@ function hudResult(info) {                                         // info = { s
     popScore(res.deltas);
     if (res.off >= 0) {
       const r = o.riders[res.off];
-      sndCorrect(); sayNow(offLine(o, r)); refreshMemo();
+      sndCorrect(); flushSay(); showSpeech(offLine(o, r), res.off); refreshMemo();
       const si = G.people[res.off].userData.style; if (si != null) { noteRegular(G.regulars, si, G.idx); refreshRegMemo(); }   // この見た目の客が降りた階を覚える（usual 用）
       G.leaving = res.off; G.mode = 'exiting'; G.pt = 0;
       G.people[res.off].userData.from = [G.people[res.off].position.x, G.people[res.off].position.z];
     } else if (res.changed) {
-      sndBad(); sayNow(changeLine(o)); G.mode = 'idle'; G.waitT = 0;
+      sndBad(); setChg('行き先変更 → ' + floorSpeech(o.changeTo)); sayNow(changeLine(o), firstAlive(), CFG.game.speech.changeSec); G.mode = 'idle'; G.waitT = 0;
     } else if (res.via) {
-      sndNote(); sayNow(viaDoneLine(o)); G.mode = 'idle'; G.waitT = 0;
+      sndNote(); sayNow(viaDoneLine(o), firstAlive(), CFG.game.speech.changeSec); G.mode = 'idle'; G.waitT = 0;
     } else {                                                 // 間違い（降りない階・禁止階・経由前）
       const first = res.deltas.length > 0; sndMiss(); G.bump = CFG.game.bump.wrong;
-      if (res.wrongKind === 'forbid') sayNow('えっ！' + floorSpeech(o.forbid) + 'には行かないでって言ったのに');
-      else if (isMulti(o)) sayNow(first ? 'えっ、ここじゃないですよ' : 'そこじゃないです…');
-      else sayNow((first ? 'えっ、ここ？ ' : 'そこじゃないです… ') + orderReminder(o));
+      sayNow(wrongLine(o, first, res.wrongKind));
       G.mode = 'idle'; G.waitT = 0;
     }
   }
@@ -981,8 +1042,7 @@ function hudResult(info) {                                         // info = { s
     setDoorTarget(0); G.mode = 'closing'; G.t = 0;
   }
   INPUT.onFloor = pressFloor;
-  INPUT.onOpen = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(1); stopHere(); };
-  INPUT.onClose = () => { inputFirstGesture(); sndResume(); touchReset(); if (G.mode === 'ending') { endingPress(); return; } if (busy()) { sndBad(); return; } sndClick(); setDoorTarget(0); };
+  INPUT.onHere = () => pressFloor(G.idx);                    // Enter / Space：いまの階のボタン（扉を開く。最上階の「存在しない階」の判定にもなる）
   INPUT.onFirst = () => { sndInit(); sndResume(); };
   INPUT.onRetry = () => { if (G.mode !== 'result') return false; inputFirstGesture(); sndResume(); sndClick(); startGame(); return true; };
 
@@ -1009,9 +1069,10 @@ function hudResult(info) {                                         // info = { s
     carSetDoor(G.door);
 
     // 台詞キュー
+    if (G.sayHold > 0) { G.sayHold -= dt; if (G.sayHold <= 0 && G.pend) { const pd = G.pend; showSpeech(pd.text, pd.who, pd.hold); } }   // 直前の台詞の最小表示秒数が過ぎたら、待たせていた台詞を出す
     if (G.sayQ.length) {
       G.sayT -= dt;
-      if (G.sayT <= 0) { const it = G.sayQ.shift(); hudSpeech(it.text); if (it.reveal) it.reveal(); G.sayT = CFG.game.sayGap; }
+      if (G.sayT <= 0) { const it = G.sayQ.shift(); showSpeech(it.text, it.who, it.hold); if (it.reveal) it.reveal(); G.sayT = CFG.game.sayGap; }
     }
 
     const walking = new Set(), n = G.people.length;
@@ -1025,7 +1086,7 @@ function hudResult(info) {                                         // info = { s
     } else if (G.mode === 'moving') {
       G.mt += dt;
       if (G.order && G.order.kind === 'mid' && G.order.midState === 'pending' && G.mt >= CFG.game.midShoutSec) {   // Lv4：動いている最中に目的階が変わる
-        const line = midShout(G.order); sndBad(); sayNow(line);
+        const line = midShout(G.order); sndBad(); setChg('行き先変更 → ' + floorSpeech(G.order.midTo)); sayNow(line, 0, CFG.game.speech.changeSec);
       }
       if (G.t >= CFG.move.stepSec) {                         // 1 階進む
         G.t -= CFG.move.stepSec; G.idx = G.path[G.step++]; sndTick(); showFloor();
@@ -1054,7 +1115,7 @@ function hudResult(info) {                                         // info = { s
         p.rotation.y += (Math.PI - p.rotation.y) * Math.min(1, dt * 12);
         p.position.x = f[0] + (gm.doorX - f[0]) * k; p.position.z = f[1] + (gm.doorZ - f[1]) * k; walkPerson(p, G.time); walking.add(p);
         if (k >= 1) {
-          scene.remove(p); G.people[G.leaving] = null; G.leaving = -1; hudSpeech(null);
+          scene.remove(p); G.people[G.leaving] = null; G.leaving = -1; clearSpeech();
           if (G.res.done) { if (isFinished(G.S)) startFinish(); else spawnGroup(); }
           else { G.mode = 'idle'; G.waitT = 0; doRotate(); }
         }
@@ -1082,6 +1143,12 @@ function hudResult(info) {                                         // info = { s
     camera.position.set(C.x + Math.sin(k * 1.3) * sh + bp * 0.5, C.y + Math.sin(k) * sh + bp, C.z);
     camera.lookAt(C.lookX, C.lookY, C.lookZ);
     G.people.forEach(p => { if (p && !walking.has(p)) updatePerson(p, G.time); });
+    // 吹き出しは「いま話している人」の頭上へ（3D → 画面座標に投影）
+    if (SPK.on) {
+      const sp = SPK.who >= 0 ? G.people[SPK.who] : null; let hx = null, hy = null;
+      if (sp) { camera.updateMatrixWorld(); HEADV.set(sp.position.x, CFG.game.speech.headY * sp.scale.y, sp.position.z).project(camera); hx = (HEADV.x * 0.5 + 0.5) * view.clientWidth; hy = (-HEADV.y * 0.5 + 0.5) * view.clientHeight; }
+      hudPlaceSpeech(hx, hy, view.clientWidth);
+    }
   }
 
   document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) SND.ctx.suspend(); else SND.ctx.resume(); });   // タブを離れたら音を止める（戻ったとき dt は 0.05 秒で頭打ちなので状態は飛ばない）

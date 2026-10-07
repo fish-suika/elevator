@@ -17,7 +17,7 @@ function hudSetFloor(i) {
   HUD.btns.forEach((b, k) => b.classList.toggle('here', k === i));
 }
 function hudArrow(dir) { const a = $('arrow'); a.textContent = dir > 0 ? '▲' : dir < 0 ? '▼' : ''; a.classList.toggle('on', dir !== 0); }
-function hudLit(i, on) { if (HUD.btns[i]) HUD.btns[i].classList.toggle('lit', on); }
+function hudLit(i, on) { if (HUD.btns[i]) HUD.btns[i].classList.toggle('lit', on); carLit(i, on); }
 function hudFlash(a) { $('flash').style.opacity = a; }
 let msgTimer = 0;
 function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.add('on'); clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.remove('on'), 1400); }

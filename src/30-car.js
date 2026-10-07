@@ -53,14 +53,15 @@ function buildCar(scene) {
   scene.add(boxMesh(0.9, 0.5, 0.03, 0x15171c, 0, C.doorH + 0.37, C.zBack + 0.0));
   carSetDisplay('1F', 0);
 
-  // 右の壁のボタンパネル（飾り）
-  const px = hw - 0.02, pz = -0.2;
-  const panel = boxMesh(0.04, 1.05, 0.34, 0x20242b, px, 1.68, pz, { metalness: 0.6, roughness: 0.4 });
-  scene.add(panel);
-  const bm = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x332a10, roughness: 0.4, metalness: 0.5 });
-  for (let r = 0; r < 6; r++) for (let c = 0; c < 2; c++) {
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), bm);
-    b.rotation.z = Math.PI / 2; b.position.set(px - 0.03, 2.05 - r * 0.15, pz - 0.07 + c * 0.14); scene.add(b);
+  // 扉の右横の壁（奥の壁）のボタンパネル。階ボタン 12 個（押すと点灯。carLit）。手すり（左右の壁）とは重ならない
+  const px = dw / 2 + 0.34, pz = C.zBack + 0.03, py = 1.45;
+  scene.add(boxMesh(0.3, 1.05, 0.04, 0x20242b, px, py, pz, { metalness: 0.6, roughness: 0.4 }));
+  CAR.btns = [];
+  for (let k = 0; k < 12; k++) {                                       // 上の段ほど高い階（10F が右上）
+    const i = 11 - k, r = Math.floor(k / 2), c = k % 2;
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x332a10, roughness: 0.4, metalness: 0.5 });
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), mat);
+    b.rotation.x = Math.PI / 2; b.position.set(px - 0.07 + c * 0.14, py + 0.38 - r * 0.15, pz + 0.03); scene.add(b); CAR.btns[i] = mat;
   }
 
   // 照明
@@ -101,3 +102,6 @@ function carSetHall(idx) {
 
 // 謎の階：扉の向こうを真っ白な「何もない空間」にする（次に carSetHall が呼ばれると元に戻る）
 function carSetVoid() { CAR.hallMat.color.setHex(0xffffff); }
+
+// 壁のボタンパネルの点灯（i = 階インデックス）。HUD の階ボタンと同じタイミングで光る
+function carLit(i, on) { const m = CAR.btns && CAR.btns[i]; if (m) { m.emissive.setHex(on ? 0xffa020 : 0x332a10); m.color.setHex(on ? 0xffd890 : 0xe8e2d0); } }

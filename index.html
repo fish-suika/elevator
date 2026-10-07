@@ -127,7 +127,7 @@
   <div id="pops"></div>
   <div id="endBanner"></div>
   <div id="title"><h1>エレベーター係</h1><p class="sub">ボタンを押すだけの、かんたんなお仕事</p>
-    <div class="how"><b>遊び方</b><br>客の注文を聞いて、<br>階数ボタンを押して<br>目的階へ案内しよう<small>スマホ：ボタンをタップ<br>PC：数字キー（0＝10F、B＝地下1階、N＝地下2階）</small></div>
+    <div class="how"><b>遊び方</b><br>客の注文を聞いて、<br>階数ボタンを押して<br>目的階へ案内しよう<small>スマホ：画面の階ボタンをタップ<br>PC：クリック または 数字キー（0＝10F、B＝地下1階、N＝地下2階）</small></div>
     <button id="startBtn">スタート</button></div>
   <div id="result">
     <h2 id="resHead">本日の勤務終了</h2>
@@ -625,14 +625,15 @@ function buildCar(scene) {
   scene.add(boxMesh(0.9, 0.5, 0.03, 0x15171c, 0, C.doorH + 0.37, C.zBack + 0.0));
   carSetDisplay('1F', 0);
 
-  // 右の壁のボタンパネル（飾り）
-  const px = hw - 0.02, pz = -0.2;
-  const panel = boxMesh(0.04, 1.05, 0.34, 0x20242b, px, 1.68, pz, { metalness: 0.6, roughness: 0.4 });
-  scene.add(panel);
-  const bm = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x332a10, roughness: 0.4, metalness: 0.5 });
-  for (let r = 0; r < 6; r++) for (let c = 0; c < 2; c++) {
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), bm);
-    b.rotation.z = Math.PI / 2; b.position.set(px - 0.03, 2.05 - r * 0.15, pz - 0.07 + c * 0.14); scene.add(b);
+  // 扉の右横の壁（奥の壁）のボタンパネル。階ボタン 12 個（押すと点灯。carLit）。手すり（左右の壁）とは重ならない
+  const px = dw / 2 + 0.34, pz = C.zBack + 0.03, py = 1.45;
+  scene.add(boxMesh(0.3, 1.05, 0.04, 0x20242b, px, py, pz, { metalness: 0.6, roughness: 0.4 }));
+  CAR.btns = [];
+  for (let k = 0; k < 12; k++) {                                       // 上の段ほど高い階（10F が右上）
+    const i = 11 - k, r = Math.floor(k / 2), c = k % 2;
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x332a10, roughness: 0.4, metalness: 0.5 });
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), mat);
+    b.rotation.x = Math.PI / 2; b.position.set(px - 0.07 + c * 0.14, py + 0.38 - r * 0.15, pz + 0.03); scene.add(b); CAR.btns[i] = mat;
   }
 
   // 照明
@@ -673,6 +674,9 @@ function carSetHall(idx) {
 
 // 謎の階：扉の向こうを真っ白な「何もない空間」にする（次に carSetHall が呼ばれると元に戻る）
 function carSetVoid() { CAR.hallMat.color.setHex(0xffffff); }
+
+// 壁のボタンパネルの点灯（i = 階インデックス）。HUD の階ボタンと同じタイミングで光る
+function carLit(i, on) { const m = CAR.btns && CAR.btns[i]; if (m) { m.emissive.setHex(on ? 0xffa020 : 0x332a10); m.color.setHex(on ? 0xffd890 : 0xe8e2d0); } }
 // ===== 乗客（簡易 3D キャラ）。見た目の違いは PERSON_STYLES から選ぶ =====
 const PERSON_STYLES = [
   { skin: 0xf2c9a0, hair: 0x2b2118, shirt: 0x3a6ea5, pants: 0x2b2f3a },   // 会社員
@@ -773,7 +777,7 @@ function hudSetFloor(i) {
   HUD.btns.forEach((b, k) => b.classList.toggle('here', k === i));
 }
 function hudArrow(dir) { const a = $('arrow'); a.textContent = dir > 0 ? '▲' : dir < 0 ? '▼' : ''; a.classList.toggle('on', dir !== 0); }
-function hudLit(i, on) { if (HUD.btns[i]) HUD.btns[i].classList.toggle('lit', on); }
+function hudLit(i, on) { if (HUD.btns[i]) HUD.btns[i].classList.toggle('lit', on); carLit(i, on); }
 function hudFlash(a) { $('flash').style.opacity = a; }
 let msgTimer = 0;
 function hudMsg(text) { const m = $('msg'); m.textContent = text; m.classList.add('on'); clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.remove('on'), 1400); }
